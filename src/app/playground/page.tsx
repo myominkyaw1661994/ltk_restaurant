@@ -55,43 +55,43 @@ const sale_products = [
     id: 1,
     name: "Product 1",
     prices: 1000,
-    qty: 10,
-    total: 10000
+    qty: 0,
+    total: 0
   },
   {
     id: 2,
     name: "Product 2",
     prices: 2000,
-    qty: 20,
-    total: 20000
+    qty: 0,
+    total: 0
   },
   {
     id: 3,
     name: "Product 3",
     prices: 3000,
-    qty: 30,
-    total: 30000
+    qty: 0,
+    total: 0
   },
   {
     id: 4,
     name: "Product 4",
     prices: 4000,
-    qty: 40,
-    total: 40000,
+    qty: 0,
+    total: 0,
   },
   {
     id: 5,
     name: "Product 5",
     prices: 4000,
-    qty: 40,
-    total: 40000,
+    qty: 0,
+    total: 0,
   },
    {
     id: 6,
     name: "Product 6",
     prices: 4000,
-    qty: 40,
-    total: 40000,
+    qty: 0,
+    total: 0,
   }
 ]
 
@@ -115,16 +115,35 @@ const EditPage = ({ params }: DetailPageProps) => {
   // const [open, setOpen] = React.useState(false)
   // const [value, setValue] = React.useState("")
 
+  const [totalSale, setTotalSale] = React.useState(0)
+  const [discount, setDiscount] = React.useState(0)
+
   const [products, setProducts] = React.useState([
       {
         row_id: 1,
-        id: 1,
-        name: "Product 1",
-        prices: 1000,
-        qty: 10,
-        total: 10000
+        id: 0,
+        name: "",
+        prices: 0,
+        qty: 0,
+        total: 0
       }
   ]);
+
+  React.useEffect(() => {
+    total_calculation();
+  }, [products, discount]);
+
+ 
+  const total_calculation = () => {
+    products.map((product) => product.total = product.prices * product.qty);
+    let total = products.reduce((sum, item) => sum + item.total, 0);
+    if (discount && Number.isInteger(discount)) {
+      if( discount > total) return;
+      total = total - discount
+    }
+
+    setTotalSale(total);
+  }
 
   const check = () => {
     const new_row_number = products[products.length-1]['row_id'] + 1;
@@ -141,11 +160,42 @@ const EditPage = ({ params }: DetailPageProps) => {
     );
   }
 
-  const onQtyUpdate = (value: any, product: any) => {
-    console.log('qty update')
-    console.log(value);
+  const onQtyUpdate = (product: Product) => {
     console.log(product);
+    onChangeProduct(product)
   }
+
+  const onDelete = (product: Product) => {
+    if(products.length == 1){
+      console.log("here")
+      setProducts([
+        {
+          row_id: 1,
+          id: 1,
+          name: "",
+          prices: 0,
+          qty: 0,
+          total: 0
+        }
+      ])
+
+      return;
+    }
+    const updatedProducts = products.filter(p => p.row_id !== product.row_id)
+    .map((p, index) => ({
+      ...p,
+      row_id: index + 1
+    }));
+
+    console.log(updatedProducts)
+  
+    setProducts(updatedProducts);
+  }
+
+  const applyDiscount = (amount: number) => {
+    setDiscount(amount);
+  }
+
 
   return (
     <div className="mt-5">
@@ -210,18 +260,19 @@ const EditPage = ({ params }: DetailPageProps) => {
               sale_products={sale_products} 
               onChangeHandler={onChangeProduct}
               onQtyUpdateHandler={onQtyUpdate}
+              onDeleteHandler={onDelete}
             />)}
           </TableBody>
           <TableFooter>
              <TableRow className="mt-5">
               <TableCell colSpan={3}>Discount</TableCell>
               <TableCell>
-                <Input />
+                <Input className="w-30" type="number" defaultValue={discount} onChange={(e) => applyDiscount(parseInt(e.target.value))}/>
               </TableCell>
             </TableRow>
             <TableRow className="mt-5">
               <TableCell colSpan={3}>Total</TableCell>
-              <TableCell>၁၀၀၀၀၀ကျပ်</TableCell>
+              <TableCell>{totalSale}</TableCell>
             </TableRow>
           </TableFooter>
         </Table>

@@ -28,6 +28,7 @@ import { Check, ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Input } from "./ui/input";
 import { QuantityInput } from "./Quantity";
+import { Trash2 } from "lucide-react"
 
 
 type Product = {
@@ -53,11 +54,13 @@ type RowOfSsale = {
     sale_products: SaleProduct[];
     rownumber: number;
     onChangeHandler: (product: Product) => void;
-    onQtyUpdateHandler: (value: number, product: Product) => void;
+    onQtyUpdateHandler: (product: Product) => void;
+    onDeleteHandler: (product: Product) => void;
 }
 
-export default function RowOfSsale({product, sale_products, onChangeHandler, onQtyUpdateHandler, rownumber} : RowOfSsale){
+export default function RowOfSsale({product, sale_products, onChangeHandler, onQtyUpdateHandler, onDeleteHandler, rownumber} : RowOfSsale){
     const [open, setOpen] = React.useState(false)
+    const [local_product, setLocalProduct] = React.useState(product);
 
     return (
         <TableRow key={product.id}>
@@ -86,17 +89,7 @@ export default function RowOfSsale({product, sale_products, onChangeHandler, onQ
                             <CommandItem
                             key={sale_product.id}
                             value={sale_product.name}
-                            // onSelect={(currentValue) => {
-                            //     console.log(currentValue)
-                            //     setValue(currentValue === value ? "" : currentValue)
-                            //     setOpen(false)
-                            //     console.log("done")
-                            // }}
                             onSelect={(currentValue) => {
-                                // onChangeHandler(1, currentValue)
-                                console.log("change")
-                                // console.log(currentValue);
-                                console.log(sale_product);
                                 const p = {...sale_product, row_id: rownumber}
                                 onChangeHandler(p);
                                 setOpen(false)
@@ -120,9 +113,16 @@ export default function RowOfSsale({product, sale_products, onChangeHandler, onQ
             <TableCell>{product.prices}</TableCell>
             <TableCell><QuantityInput value={product.qty} min={0} max={100} onChange={(value)=> {
                 product.qty = value
-                onQtyUpdateHandler(value, product)
+                onQtyUpdateHandler(product)
             } }/></TableCell>
-            <TableCell>{product.total}</TableCell>
+            <TableCell>
+                {product.total}
+                <Button className="ml-3 mt-3 bg-red-500 text-white hover:bg-red-300" 
+                onClick={() => onDeleteHandler(product)}
+                >
+                    <Trash2 />
+                </Button>
+            </TableCell>
         </TableRow>
     )
 }
