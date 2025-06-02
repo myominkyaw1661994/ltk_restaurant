@@ -1,12 +1,14 @@
 "use client"
+
 import React, { useEffect, useState } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table"
 import { toast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { requestNotificationPermission } from '@/lib/notification';
 
 interface SaleItem {
   product_id: string
@@ -22,57 +24,52 @@ interface Product {
   price: number
 }
 
-interface Sale {
-  id: string
-  items: SaleItem[]
-  total_amount: number
-  created_at: string
-  status: 'pending' | 'completed' | 'cancelled'
-  customer_name?: string
-  table_number?: string
-  notes?: string
-}
-
-export default function EditSalePage({ params }: { params: { id: string } }) {
+export default function NewSalePage() {
   const router = useRouter()
-  const { id } = params
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [customerName, setCustomerName] = useState("")
   const [tableNumber, setTableNumber] = useState("")
-  const [status, setStatus] = useState<Sale['status']>("pending")
+  const [status, setStatus] = useState<'pending' | 'completed' | 'cancelled'>("pending")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<SaleItem[]>([])
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProducts = async () => {
       try {
         setLoading(true)
         setError(null)
-        // Fetch sale
-        const res = await fetch(`/api/v1/sale/${id}`)
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || "Failed to fetch sale")
-        setCustomerName(data.sale.customer_name || "")
-        setTableNumber(data.sale.table_number || "")
-        setStatus(data.sale.status)
-        setNotes(data.sale.notes || "")
-        setItems(data.sale.items)
-        // Fetch products
         const prodRes = await fetch(`/api/v1/product?page=1&pageSize=1000&type=sale`)
         const prodData = await prodRes.json()
         if (!prodRes.ok) throw new Error(prodData.error || "Failed to fetch products")
         setProducts(prodData.products)
+        // Add one default item
+        if (prodData.products.length > 0) {
+          setItems([
+            {
+              product_id: prodData.products[0].id,
+              product_name: prodData.products[0].product_name,
+              price: prodData.products[0].price,
+              quantity: 1,
+              total: prodData.products[0].price
+            }
+          ])
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred")
       } finally {
         setLoading(false)
       }
     }
-    fetchData()
-  }, [id])
+    fetchProducts()
+  }, [])
+
+  // useEffect(() => {
+  //   // Request notification permission when page loads
+  //   requestNotificationPermission().catch(console.error);
+  // }, []);
 
   const handleItemChange = (idx: number, field: keyof SaleItem, value: any) => {
     setItems(items => items.map((item, i) =>
@@ -105,14 +102,14 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch(`/api/v1/sale/${id}`, {
-        method: "PUT",
+      const res = await fetch(`/api/v1/sale`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customer_name: customerName, table_number: tableNumber, status, notes, items })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to update sale")
-      toast({ title: "Sale updated!" })
+      if (!res.ok) throw new Error(data.error || "Failed to create sale")
+      toast({ title: "Sale created!" })
       router.push("/sale")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
@@ -126,7 +123,7 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-2 sm:px-0">
-      <h1 className="text-2xl font-bold mb-6">Edit Sale</h1>
+      <h1 className="text-2xl font-bold mb-6">New Sale</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -151,7 +148,7 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
         </div>
         <div>
           <label className="block font-medium mb-1">Status</label>
-          <Select value={status} onValueChange={value => setStatus(value as Sale['status'])}>
+          <Select value={status} onValueChange={value => setStatus(value as typeof status)}>
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
@@ -230,7 +227,7 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
           <Button type="button" className="mt-2 w-full sm:w-auto" onClick={handleAddItem}>Add Item</Button>
         </div>
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Create Sale"}</Button>
           <Button type="button" variant="secondary" onClick={() => router.push("/sale")}>Cancel</Button>
         </div>
       </form>

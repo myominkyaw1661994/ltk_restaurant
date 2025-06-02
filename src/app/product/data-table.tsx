@@ -22,17 +22,31 @@ import { DataTablePagination } from "@/components/Pagination"
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  pageCount: number
+  pageIndex: number
+  pageSize: number
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  pageCount,
+  pageIndex,
+  pageSize
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
+    pageCount,
+    state: {
+      pagination: {
+        pageIndex: pageIndex,
+        pageSize: pageSize
+      }
+    },
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+
   })
 
   return (

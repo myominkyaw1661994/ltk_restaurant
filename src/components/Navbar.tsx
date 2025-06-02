@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Moon, Sun, User } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
 
 import {
   DropdownMenu,
@@ -14,12 +15,19 @@ import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
   const { setTheme } = useTheme()
+  const router = useRouter()
   return (
-    <nav className="shadow-sm dark:border-2 fixed w-full z-10">
+    <nav className="shadow-sm dark:border-2 w-full z-10">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           
-          <h1 className="dark:text-white">လေထန်ကုန်း</h1>
+          <h1
+            className="dark:text-white cursor-pointer select-none"
+            onClick={() => router.push("/")}
+            title="Go to Home"
+          >
+            လေထန်ကုန်း
+          </h1>
 
           <div className="flex gap-x-3">
              <div>

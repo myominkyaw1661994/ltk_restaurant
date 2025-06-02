@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import FloatingMenu from '../components/FloatingMenu';
 import Navbar from '../components/Navbar';
+import { Toaster } from "@/components/ui/toaster"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,7 @@ export default function RootLayout({
     
           <FloatingMenu />
         </ThemeProvider>
+        <Toaster />
       </body>
     </html>
   );

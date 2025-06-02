@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,61 +15,96 @@ import { useRouter } from 'next/navigation';
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
-export type Payment = {
+export type Sale = {
   id: string
-  amount: number
-  status: "pending" | "processing" | "success" | "failed"
-  email: string
+  total_amount: number
+  created_at: string
+  status: 'pending' | 'completed' | 'cancelled'
+  customer_name?: string
+  table_number?: string
 }
   
-export const columns: ColumnDef<Payment>[] = [
+export const columns: ColumnDef<Sale>[] = [
+  {
+    accessorKey: "id",
+    header: "ID",
+  },
+  {
+    accessorKey: "customer_name",
+    header: "Customer",
+  },
+  {
+    accessorKey: "table_number",
+    header: "Table",
+  },
+  {
+    accessorKey: "total_amount",
+    header: "Total Amount",
+    cell: ({ row }) => {
+      const amount = parseFloat(row.getValue("total_amount"))
+      const formatted = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "MMK",
+      }).format(amount)
+      return formatted
+    },
+  },
+  {
+    accessorKey: "created_at",
+    header: "Date",
+    cell: ({ row }) => {
+      const date = new Date(row.getValue("created_at"))
+      return date.toLocaleDateString()
+    },
+  },
   {
     accessorKey: "status",
     header: "Status",
   },
   {
-    accessorKey: "email",
-    header: "Email",
-  },
-  {
-    accessorKey: "amount",
-    header: () => <div className="text-right">Amount</div>,
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"))
-      const formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "MMK",
-      }).format(amount)
- 
-      return <div className="text-right font-medium">{formatted}</div>
-    },
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
-      const sale = row.original;
-      const router = useRouter();
-        
+      const sale = row.original
+      const router = useRouter()
+
+      const handleDelete = async () => {
+        if (confirm('Are you sure you want to delete this sale?')) {
+          try {
+            const response = await fetch(`/api/v1/sale/${sale.id}`, {
+              method: 'DELETE',
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to delete sale');
+            }
+            
+            router.refresh();
+          } catch (error) {
+            console.error('Error deleting sale:', error);
+            alert('Failed to delete sale');
+          }
+        }
+      }
+
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() =>router.push(`/sale/${sale.id}`)}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/sale/${sale.id}`)}
+          >
+            View
+          </Button>
+          {sale.status === 'pending' && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
             >
-              Detail
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>router.push(`/sale/edit/${sale.id}`)}
-            >Edit</DropdownMenuItem>
-            <DropdownMenuItem>Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       )
     },
   },
