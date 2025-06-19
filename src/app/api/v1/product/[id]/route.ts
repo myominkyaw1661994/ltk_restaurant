@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productRef = doc(db, 'products', params.id);
+    const { id } = await params;
+    const productRef = doc(db, 'products', id);
     const productSnap = await getDoc(productRef);
 
     if (!productSnap.exists()) {
@@ -33,10 +34,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { product_name, price } = body;
 
@@ -55,7 +57,7 @@ export async function PUT(
       );
     }
 
-    const productRef = doc(db, 'products', params.id);
+    const productRef = doc(db, 'products', id);
     const productSnap = await getDoc(productRef);
 
     if (!productSnap.exists()) {
@@ -74,7 +76,7 @@ export async function PUT(
     return NextResponse.json({
       message: 'Product updated successfully',
       product: {
-        id: params.id,
+        id: id,
         product_name,
         price,
         updated_at: new Date().toISOString()
@@ -90,11 +92,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productRef = doc(db, 'products', params.id);
+    const { id } = await params;
+    const productRef = doc(db, 'products', id);
     const productSnap = await getDoc(productRef);
 
     if (!productSnap.exists()) {
