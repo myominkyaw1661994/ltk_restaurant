@@ -146,22 +146,22 @@ export default function POSPage() {
       
       console.log('Received sale data:', data.sale) // Debug log
       
-      // Ensure we're using the correct status from the response
+      // Use the status from the response, or fallback to the status we sent
       const saleWithStatus = {
         ...data.sale,
-        status: data.sale.status || status // Fallback to the status we sent if not in response
+        status: data.sale.status || status
       }
       
       // Store sale details and show success dialog
       setSaleDetails(saleWithStatus)
       setShowSuccessDialog(true)
       
-      // Clear cart and form
+      // Clear cart and form, but preserve the status for the next sale
       setCartItems([])
       setCustomerName("")
       setTableNumber("")
       setNotes("")
-      setStatus("pending") // Reset status to default
+      // Don't reset status - keep the user's selection for the next sale
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -190,32 +190,78 @@ export default function POSPage() {
   if (error) return <div className="mt-5 text-red-600">Error: {error}</div>
 
   return (
-    <div className="container mx-auto py-10 px-4">
-      <h1 className="text-2xl font-bold mb-6">Point of Sale</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-       
+    <div className="container mx-auto py-4 px-2 sm:py-10 sm:px-4">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center sm:text-left">Point of Sale</h1>
+      
+      {/* Mobile: Stack vertically, Desktop: Side by side */}
+      <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 sm:gap-6 overflow-y-auto lg:overflow-visible">
+        
+        {/* Products Section - Show first on mobile */}
+        <div className="order-1 lg:order-2 space-y-3 sm:space-y-4">
+          <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-2">
+            <Input
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-base"
+            />
+          </div>
+          
+          <div className="h-[40vh] lg:h-[calc(100vh-300px)] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+              {filteredProducts.map((product) => {
+                const cartItem = cartItems.find(item => item.product_id === product.id);
+                const itemCount = cartItem ? cartItem.quantity : 0;
+                
+                return (
+                  <Card
+                    key={product.id}
+                    className="cursor-pointer hover:shadow-lg transition-shadow active:scale-95 touch-manipulation relative"
+                    onClick={() => addToCart(product)}
+                  >
+                    {/* Product Count Badge */}
+                    {itemCount > 0 && (
+                      <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center z-10 shadow-lg">
+                        {itemCount}
+                      </div>
+                    )}
+                    
+                    <CardHeader className="p-3 sm:p-4">
+                      <CardTitle className="text-sm sm:text-lg leading-tight">{product.product_name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 sm:p-4 pt-0">
+                      <p className="text-base sm:text-lg font-bold text-green-600">{product.price} MMK</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
-        {/* Left side - Cart */}
-        <div className="space-y-4">
-          <Card className="h-[calc(100vh-200px)] overflow-y-auto">
-            <CardHeader>
-              <CardTitle>Current Sale</CardTitle>
+        {/* Cart Section - Show second on mobile */}
+        <div className="order-2 lg:order-1 space-y-3 sm:space-y-4">
+          <Card className="h-auto lg:h-[calc(100vh-200px)] overflow-y-auto lg:overflow-y-auto">
+            <CardHeader className="top-0 z-10 pb-3">
+              <CardTitle className="text-lg sm:text-xl">Current Sale</CardTitle>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <CardContent className="p-3 sm:p-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                {/* Customer and Table Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <label className="block font-medium mb-1">Customer Name</label>
+                    <label className="block font-medium mb-1 text-sm sm:text-base">Customer Name</label>
                     <Input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Optional"
+                      className="text-sm sm:text-base"
                     />
                   </div>
                   <div>
-                    <label className="block font-medium mb-1">Table Number</label>
+                    <label className="block font-medium mb-1 text-sm sm:text-base">Table Number</label>
                     <Select value={tableNumber} onValueChange={setTableNumber}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm sm:text-base">
                         <SelectValue placeholder="Select table" />
                       </SelectTrigger>
                       <SelectContent>
@@ -229,10 +275,11 @@ export default function POSPage() {
                   </div>
                 </div>
 
+                {/* Status */}
                 <div>
-                  <label className="block font-medium mb-1">Status</label>
+                  <label className="block font-medium mb-1 text-sm sm:text-base">Status</label>
                   <Select value={status} onValueChange={(value) => setStatus(value as SaleStatus)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm sm:text-base">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -243,81 +290,89 @@ export default function POSPage() {
                   </Select>
                 </div>
 
+                {/* Notes */}
                 <div>
-                  <label className="block font-medium mb-1">Notes</label>
+                  <label className="block font-medium mb-1 text-sm sm:text-base">Notes</label>
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Optional"
+                    className="text-sm sm:text-base min-h-[60px]"
                   />
                 </div>
 
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {cartItems.map((item) => (
-                        <TableRow key={item.product_id}>
-                          <TableCell>{item.product_name}</TableCell>
-                          <TableCell>{item.price}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
-                              >
-                                -
-                              </Button>
-                              <span>{item.quantity}</span>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
-                              >
-                                +
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell>{item.total}</TableCell>
-                          <TableCell>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removeFromCart(item.product_id)}
-                            >
-                              Remove
-                            </Button>
-                          </TableCell>
+                {/* Cart Items */}
+                <div className="rounded-md border overflow-hidden">
+                  <div className="overflow-visible">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-gray-50 dark:bg-gray-800">
+                        <TableRow>
+                          <TableHead className="text-xs sm:text-sm">Product</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Price</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Qty</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Total</TableHead>
+                          <TableHead className="text-xs sm:text-sm w-16"></TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-right font-bold">
-                          Total Amount:
-                        </TableCell>
-                        <TableCell className="font-bold">{totalAmount}</TableCell>
-                        <TableCell />
-                      </TableRow>
-                    </TableFooter>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {cartItems.map((item) => (
+                          <TableRow key={item.product_id}>
+                            <TableCell className="text-xs sm:text-sm font-medium">{item.product_name}</TableCell>
+                            <TableCell className="text-xs sm:text-sm">{item.price}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-1 sm:space-x-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                                  className="h-6 w-6 sm:h-8 sm:w-8 p-0"
+                                >
+                                  -
+                                </Button>
+                                <span className="text-xs sm:text-sm font-medium min-w-[20px] text-center">{item.quantity}</span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                                  className="h-6 w-6 sm:h-8 sm:w-8 p-0"
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs sm:text-sm font-medium">{item.total}</TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => removeFromCart(item.product_id)}
+                                className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-xs"
+                              >
+                                ×
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Total Amount - Always visible */}
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-sm sm:text-base">Total Amount:</span>
+                      <span className="font-bold text-lg sm:text-xl text-green-600">{totalAmount} MMK</span>
+                    </div>
+                  </div>
                 </div>
 
+                {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold"
                   disabled={saving || cartItems.length === 0}
                 >
                   {saving ? "Processing..." : status === "completed" ? "Complete Sale" : "Save Sale"}
@@ -326,41 +381,13 @@ export default function POSPage() {
             </CardContent>
           </Card>
         </div>
-
-         {/* Right side - Products */}
-         <div className="space-y-4">
-          <Input
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="mb-4"
-          />
-          <div className="h-[calc(100vh-200px)] overflow-y-auto pr-2">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => addToCart(product)}
-                >
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-lg">{product.product_name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-lg font-bold">{product.price} MMK</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className={`text-2xl ${
+            <DialogTitle className={`text-xl sm:text-2xl ${
               saleDetails?.status === "completed" ? "text-green-600" :
               saleDetails?.status === "pending" ? "text-yellow-600" :
               "text-red-600"
@@ -375,11 +402,11 @@ export default function POSPage() {
             <div className="space-y-4">
               <div id="print-content" className="space-y-4">
                 <div className="text-center mb-4">
-                  <h2 className="text-xl font-bold">Rest LTK</h2>
-                  <p className="text-sm text-gray-500">Thank you for your business!</p>
+                  <h2 className="text-lg sm:text-xl font-bold">Rest LTK</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Thank you for your business!</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 text-sm sm:text-base">
                   <div>
                     <p className="font-semibold">Date</p>
                     <p>{formatDate(saleDetails.created_at)}</p>
@@ -398,32 +425,32 @@ export default function POSPage() {
                   )}
                 </div>
 
-                <div className="border rounded-md">
+                <div className="border rounded-md overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Product</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Price</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Qty</TableHead>
+                        <TableHead className="text-right text-xs sm:text-sm">Total</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {saleDetails.items.map((item: SaleItem) => (
                         <TableRow key={item.product_id}>
-                          <TableCell>{item.product_name}</TableCell>
-                          <TableCell>{formatCurrency(item.price)}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.total)}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{item.product_name}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{formatCurrency(item.price)}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{item.quantity}</TableCell>
+                          <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(item.total)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                     <TableFooter>
                       <TableRow>
-                        <TableCell colSpan={3} className="text-right font-bold">
+                        <TableCell colSpan={3} className="text-right font-bold text-sm sm:text-base">
                           Total Amount:
                         </TableCell>
-                        <TableCell className="text-right font-bold">
+                        <TableCell className="text-right font-bold text-sm sm:text-base">
                           {formatCurrency(saleDetails.total_amount)}
                         </TableCell>
                       </TableRow>
@@ -433,15 +460,15 @@ export default function POSPage() {
 
                 {saleDetails.notes && (
                   <div>
-                    <p className="font-semibold">Notes</p>
-                    <p>{saleDetails.notes}</p>
+                    <p className="font-semibold text-sm sm:text-base">Notes</p>
+                    <p className="text-sm sm:text-base">{saleDetails.notes}</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -542,6 +569,7 @@ export default function POSPage() {
                   }
                 }
               }}
+              className="w-full sm:w-auto"
             >
               <Printer className="mr-2 h-4 w-4" />
               Print Receipt
@@ -549,6 +577,7 @@ export default function POSPage() {
             <Button
               variant="outline"
               onClick={() => setShowSuccessDialog(false)}
+              className="w-full sm:w-auto"
             >
               Close
             </Button>
@@ -557,6 +586,7 @@ export default function POSPage() {
                 setShowSuccessDialog(false)
                 router.push('/sale')
               }}
+              className="w-full sm:w-auto"
             >
               View All Sales
             </Button>
