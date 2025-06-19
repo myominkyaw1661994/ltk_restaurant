@@ -49,7 +49,7 @@ interface Sale {
 }
 
 interface DetailPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 const printStyles = `
@@ -63,20 +63,31 @@ const printStyles = `
 `;
 
 const DetailPage = ({ params }: DetailPageProps) => {
-  const { id } = params
   const router = useRouter()
   const { toast } = useToast()
   const [sale, setSale] = useState<Sale | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [saleId, setSaleId] = useState<string>('')
 
   useEffect(() => {
+    // Initialize params
+    const initParams = async () => {
+      const resolvedParams = await params;
+      setSaleId(resolvedParams.id);
+    };
+    initParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!saleId) return;
+
     const fetchSale = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const saleRef = doc(db, 'sales', id)
+        const saleRef = doc(db, 'sales', saleId)
         const saleDoc = await getDoc(saleRef)
 
         if (!saleDoc.exists()) {
@@ -101,7 +112,7 @@ const DetailPage = ({ params }: DetailPageProps) => {
     }
 
     fetchSale()
-  }, [id, toast])
+  }, [saleId, toast])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

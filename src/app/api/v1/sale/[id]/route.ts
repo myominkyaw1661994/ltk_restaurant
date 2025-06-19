@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const saleId = params.id;
-    const saleRef = doc(db, 'sales', saleId);
+    const { id } = await params;
+    const saleRef = doc(db, 'sales', id);
     
     // Check if sale exists and is completed
     const saleDoc = await getDoc(saleRef);
@@ -44,11 +44,11 @@ export async function DELETE(
 }
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const saleRef = doc(db, 'sales', id);
     const saleDoc = await getDoc(saleRef);
     if (!saleDoc.exists()) {
@@ -73,11 +73,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const saleRef = doc(db, 'sales', id);
     const saleDoc = await getDoc(saleRef);
     if (!saleDoc.exists()) {

@@ -6,7 +6,7 @@ import { hash } from 'bcryptjs';
 // GET /api/v1/users/[id] - Get specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get user info from middleware headers
@@ -21,7 +21,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const userDoc = await getDoc(doc(db, 'users', id));
 
     if (!userDoc.exists()) {
@@ -56,7 +56,7 @@ export async function GET(
 // PUT /api/v1/users/[id] - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get user info from middleware headers
@@ -79,7 +79,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { name, email, password, role } = body;
 
@@ -122,7 +122,7 @@ export async function PUT(
 // DELETE /api/v1/users/[id] - Delete user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get user info from middleware headers
@@ -145,7 +145,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Prevent deleting own account
     if (id === userId) {

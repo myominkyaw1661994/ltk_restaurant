@@ -34,9 +34,8 @@ interface Sale {
   notes?: string
 }
 
-export default function EditSalePage({ params }: { params: { id: string } }) {
+export default function EditSalePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const { id } = params
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,8 +46,20 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<SaleItem[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [saleId, setSaleId] = useState<string>('')
 
   useEffect(() => {
+    // Initialize params
+    const initParams = async () => {
+      const resolvedParams = await params;
+      setSaleId(resolvedParams.id);
+    };
+    initParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!saleId) return;
+
     // Check user role first
     const user = getCurrentUser();
     setCurrentUser(user);
@@ -69,7 +80,7 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
         setLoading(true)
         setError(null)
         // Fetch sale
-        const res = await fetch(`/api/v1/sale/${id}`)
+        const res = await fetch(`/api/v1/sale/${saleId}`)
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || "Failed to fetch sale")
         setCustomerName(data.sale.customer_name || "")
@@ -89,7 +100,7 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
       }
     }
     fetchData()
-  }, [id, router])
+  }, [saleId, router])
 
   const handleItemChange = (idx: number, field: keyof SaleItem, value: any) => {
     setItems(items => items.map((item, i) =>
@@ -122,7 +133,7 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
     setSaving(true)
     setError(null)
     try {
-      const res = await fetch(`/api/v1/sale/${id}`, {
+      const res = await fetch(`/api/v1/sale/${saleId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customer_name: customerName, table_number: tableNumber, status, notes, items })

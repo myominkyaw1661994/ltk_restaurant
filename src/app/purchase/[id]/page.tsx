@@ -40,24 +40,35 @@ interface Purchase {
 }
 
 interface DetailPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default function PurchaseDetail({ params }: DetailPageProps) {
-  const { id } = params
   const router = useRouter()
   const { toast } = useToast()
   const [purchase, setPurchase] = useState<Purchase | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [purchaseId, setPurchaseId] = useState<string>('')
 
   useEffect(() => {
+    // Initialize params
+    const initParams = async () => {
+      const resolvedParams = await params;
+      setPurchaseId(resolvedParams.id);
+    };
+    initParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!purchaseId) return;
+
     const fetchPurchase = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        const response = await fetch(`/api/v1/purchase/${id}`)
+        const response = await fetch(`/api/v1/purchase/${purchaseId}`)
         const data = await response.json()
 
         if (!response.ok) {
@@ -79,7 +90,7 @@ export default function PurchaseDetail({ params }: DetailPageProps) {
     }
 
     fetchPurchase()
-  }, [id, toast])
+  }, [purchaseId, toast])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

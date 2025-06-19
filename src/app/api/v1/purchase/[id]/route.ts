@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const purchaseRef = doc(db, 'purchases', params.id);
+    const { id } = await params;
+    const purchaseRef = doc(db, 'purchases', id);
     const purchaseSnap = await getDoc(purchaseRef);
 
     if (!purchaseSnap.exists()) {
@@ -33,11 +34,12 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const purchaseRef = doc(db, 'purchases', params.id);
+    const { id } = await params;
+    const purchaseRef = doc(db, 'purchases', id);
     const purchaseSnap = await getDoc(purchaseRef);
 
     if (!purchaseSnap.exists()) {
@@ -62,11 +64,12 @@ export async function DELETE(
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const purchaseRef = doc(db, 'purchases', params.id);
+    const { id } = await params;
+    const purchaseRef = doc(db, 'purchases', id);
     const purchaseSnap = await getDoc(purchaseRef);
 
     if (!purchaseSnap.exists()) {

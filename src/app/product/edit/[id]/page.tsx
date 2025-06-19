@@ -16,9 +16,9 @@ interface Product {
 }
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function ProductEdit({ params }: PageProps) {
@@ -31,8 +31,20 @@ export default function ProductEdit({ params }: PageProps) {
     product_name: '',
     price: ''
   });
+  const [productId, setProductId] = useState<string>('');
 
   useEffect(() => {
+    // Initialize params
+    const initParams = async () => {
+      const resolvedParams = await params;
+      setProductId(resolvedParams.id);
+    };
+    initParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!productId) return;
+
     // Check user role first
     const user = getCurrentUser();
     setCurrentUser(user);
@@ -49,15 +61,15 @@ export default function ProductEdit({ params }: PageProps) {
     }
 
     const fetchProduct = async () => {
-      if (!params.id) {
+      if (!productId) {
         console.error('No product ID provided');
         return;
       }
       
       try {
         setLoading(true);
-        console.log('Fetching product with ID:', params.id);
-        const response = await fetch(`/api/v1/product/${params.id}`);
+        console.log('Fetching product with ID:', productId);
+        const response = await fetch(`/api/v1/product/${productId}`);
         const data = await response.json();
         
         if (!response.ok) {
@@ -79,7 +91,7 @@ export default function ProductEdit({ params }: PageProps) {
     };
 
     fetchProduct();
-  }, [params.id, router]);
+  }, [productId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +99,7 @@ export default function ProductEdit({ params }: PageProps) {
 
     try {
       console.log('Updating product with data:', formData);
-      const response = await fetch(`/api/v1/product/${params.id}`, {
+      const response = await fetch(`/api/v1/product/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
