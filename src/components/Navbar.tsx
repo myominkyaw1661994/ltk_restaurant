@@ -199,7 +199,7 @@ export default function Navbar() {
                           <DropdownMenuItem onClick={() => router.push("/users")}>
                             <Users className="h-4 w-4 mr-2" />
                             User Management
-                          </DropdownMenuItem>
+                  </DropdownMenuItem>
                         </>
                       )}
                       
@@ -207,12 +207,12 @@ export default function Navbar() {
                       <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                         <LogOut className="h-4 w-4 mr-2" />
                         ထွက်ရန်
-                      </DropdownMenuItem>
+                  </DropdownMenuItem>
                     </>
                   ) : (
                     <DropdownMenuItem onClick={() => router.push("/auth")}>
                       ဝင်ရောက်ရန်
-                    </DropdownMenuItem>
+                  </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

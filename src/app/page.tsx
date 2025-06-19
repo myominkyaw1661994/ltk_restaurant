@@ -276,14 +276,14 @@ export default function Home() {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={summary.monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} />
               <Line type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={2} name="Sales" />
               <Line type="monotone" dataKey="purchases" stroke="#3b82f6" strokeWidth={2} name="Purchases" />
             </LineChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
         </CardContent>
       </Card>
 
@@ -303,7 +303,7 @@ export default function Home() {
                   </div>
                   <p className="font-semibold text-green-600">{formatCurrency(sale.total_amount)}</p>
                 </div>
-              ))}
+                ))}
               {filteredSales.length === 0 && (
                 <p className="text-gray-500 text-center py-4">No sales for selected period</p>
               )}
@@ -325,7 +325,7 @@ export default function Home() {
                   </div>
                   <p className="font-semibold text-blue-600">{formatCurrency(purchase.total_amount)}</p>
                 </div>
-              ))}
+                ))}
               {filteredPurchases.length === 0 && (
                 <p className="text-gray-500 text-center py-4">No purchases for selected period</p>
               )}

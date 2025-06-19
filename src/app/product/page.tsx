@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getCurrentUser, hasRole } from '@/lib/auth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ export default function ProductsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'all' | 'sale' | 'purchase'>('all');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [pagination, setPagination] = useState<PaginationInfo>({
     currentPage: 1,
     pageSize: 10,
@@ -49,6 +51,11 @@ export default function ProductsPage() {
   const router = useRouter();
 
   const pageSizeOptions = [3, 6, 9, 12];
+
+  // Check if user can perform admin actions (not staff)
+  const canPerformAdminActions = () => {
+    return currentUser && currentUser.role !== 'Staff';
+  };
 
   const fetchProducts = async (page: number, pageSize: number) => {
     try {
@@ -127,6 +134,10 @@ export default function ProductsPage() {
 
   // Initial load
   useEffect(() => {
+    // Get current user on component mount
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
     fetchProducts(1, pagination.pageSize);
   }, []); // Only run on mount
 
@@ -194,12 +205,14 @@ export default function ProductsPage() {
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Link 
-          href="/product/new" 
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Add New Product
-        </Link>
+        {canPerformAdminActions() && (
+          <Link 
+            href="/product/new" 
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Add New Product
+          </Link>
+        )}
       </div>
 
       {/* Type Filter */}
@@ -252,20 +265,22 @@ export default function ProductsPage() {
                 <p className="text-sm text-gray-500 mt-2">
                   Created: {new Date(product.created_at).toLocaleDateString()}
                 </p>
-                <div className="mt-4 flex justify-end space-x-2">
-                  <Link
-                    href={`/product/edit/${product.id}`}
-                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteClick(product.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
+                {canPerformAdminActions() && (
+                  <div className="mt-4 flex justify-end space-x-2">
+                    <Link
+                      href={`/product/edit/${product.id}`}
+                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDeleteClick(product.id)}
+                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

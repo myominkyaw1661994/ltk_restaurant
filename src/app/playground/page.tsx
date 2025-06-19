@@ -35,7 +35,7 @@ export default function PlaygroundPage() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <h1 className="text-3xl font-bold">JWT Authentication Test</h1>
-      
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -71,7 +71,7 @@ export default function PlaygroundPage() {
                 <pre className="text-sm overflow-auto">
                   {JSON.stringify(testResult, null, 2)}
                 </pre>
-              </div>
+      </div>
             )}
           </CardContent>
         </Card>

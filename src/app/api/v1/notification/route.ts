@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
 
     // For now, just log the notification since we don't have Firebase Admin SDK
     console.log('Notification would be sent:', {
-      title,
-      body,
+        title,
+        body,
       recipientCount: tokens.length,
       sentBy: userId
     });
