@@ -198,7 +198,7 @@ export default function POSPage() {
         
         {/* Products Section - Show first on mobile */}
         <div className="order-1 lg:order-2 space-y-3 sm:space-y-4">
-          <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 pb-2">
+          <div className="sticky top-0 z-10  pb-2">
             <Input
               placeholder="Search products..."
               value={searchQuery}
@@ -221,16 +221,16 @@ export default function POSPage() {
                   >
                     {/* Product Count Badge */}
                     {itemCount > 0 && (
-                      <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center z-10 shadow-lg">
+                      <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center z-10 shadow-lg">
                         {itemCount}
                       </div>
                     )}
                     
-                    <CardHeader className="p-3 sm:p-4">
-                      <CardTitle className="text-sm sm:text-lg leading-tight">{product.product_name}</CardTitle>
+                    <CardHeader className="p-2 sm:p-4">
+                      <CardTitle className="text-xs sm:text-lg leading-tight">{product.product_name}</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-3 sm:p-4 pt-0">
-                      <p className="text-base sm:text-lg font-bold text-green-600">{product.price} MMK</p>
+                    <CardContent className="p-2 sm:p-4 pt-0">
+                      <p className="text-sm sm:text-lg font-bold text-green-600">{product.price} MMK</p>
                     </CardContent>
                   </Card>
                 );
@@ -305,7 +305,7 @@ export default function POSPage() {
                 <div className="rounded-md border overflow-hidden">
                   <div className="overflow-visible">
                     <Table>
-                      <TableHeader className="sticky top-0 bg-gray-50 dark:bg-gray-800">
+                      <TableHeader className="sticky top-0">
                         <TableRow>
                           <TableHead className="text-xs sm:text-sm">Product</TableHead>
                           <TableHead className="text-xs sm:text-sm">Price</TableHead>
@@ -361,7 +361,7 @@ export default function POSPage() {
                   </div>
                   
                   {/* Total Amount - Always visible */}
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 border-t">
+                  <div className="p-3 border-t">
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-sm sm:text-base">Total Amount:</span>
                       <span className="font-bold text-lg sm:text-xl text-green-600">{totalAmount} MMK</span>
