@@ -1,9 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, orderBy, limit, where, serverTimestamp, Query } from 'firebase/firestore';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    // Get user info from middleware headers
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+
+    // Additional authentication check
+    if (!userId || !userRole) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
@@ -36,6 +48,7 @@ export async function GET(request: Request) {
       }));
 
     return NextResponse.json({
+      success: true,
       products,
       pagination: {
         currentPage: page,
@@ -49,26 +62,46 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch products' },
+      { success: false, error: 'Failed to fetch products' },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Get user info from middleware headers
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+
+    // Additional authentication check
+    if (!userId || !userRole) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Optional: Check if user has appropriate role to create products
+    if (userRole !== 'Admin' && userRole !== 'admin' && userRole !== 'Manager' && userRole !== 'manager') {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
     const { product_name, price, type } = await request.json();
 
     if (!product_name || typeof price !== 'number' || !type) {
       return NextResponse.json(
-        { error: 'Product name, price, and type are required' },
+        { success: false, error: 'Product name, price, and type are required' },
         { status: 400 }
       );
     }
 
     if (!['sale', 'purchase'].includes(type)) {
       return NextResponse.json(
-        { error: 'Invalid product type' },
+        { success: false, error: 'Invalid product type' },
         { status: 400 }
       );
     }
@@ -84,6 +117,7 @@ export async function POST(request: Request) {
     const docRef = await addDoc(productsRef, newProduct);
 
     return NextResponse.json({
+      success: true,
       id: docRef.id,
       ...newProduct,
       created_at: new Date().toISOString()
@@ -91,7 +125,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating product:', error);
     return NextResponse.json(
-      { error: 'Failed to create product' },
+      { success: false, error: 'Failed to create product' },
       { status: 500 }
     );
   }

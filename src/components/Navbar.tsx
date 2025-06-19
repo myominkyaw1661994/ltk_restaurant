@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun, User } from "lucide-react"
+import { Moon, Sun, User as UserIcon, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
+import { getCurrentUser, clearAuthData, isAuthenticated } from "@/lib/auth"
+import type { User } from '@/lib/auth'
 
 import {
   DropdownMenu,
@@ -16,6 +19,30 @@ import { Button } from "@/components/ui/button";
 export default function Navbar() {
   const { setTheme } = useTheme()
   const router = useRouter()
+  const pathname = usePathname()
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  
+  useEffect(() => {
+    const currentUser = getCurrentUser()
+    const authenticated = isAuthenticated()
+    
+    setUser(currentUser)
+    setIsLoggedIn(authenticated)
+  }, [])
+
+  const handleLogout = () => {
+    clearAuthData()
+    setUser(null)
+    setIsLoggedIn(false)
+    router.push('/auth')
+  }
+
+  // Hide navbar on auth page - this must come after all hooks
+  if (pathname === "/auth") {
+    return null
+  }
+  
   return (
     <nav className="shadow-sm dark:border-2 w-full z-10">
       <div className="max-w-6xl mx-auto px-4">
@@ -57,19 +84,28 @@ export default function Navbar() {
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
-                    <User />
+                    <UserIcon />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => console.log("Profile")}>
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => console.log("Logout")}>
-                    Logout
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => console.log("Other")}>
-                    Other
-                  </DropdownMenuItem>
+                  {isLoggedIn ? (
+                    <>
+                      <DropdownMenuItem disabled className="font-semibold">
+                        {user?.name} ({user?.role})
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push("/users")}>
+                        အသုံးပြုသူများ
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                        <LogOut className="h-4 w-4 mr-2" />
+                        ထွက်ရန်
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <DropdownMenuItem onClick={() => router.push("/auth")}>
+                      ဝင်ရောက်ရန်
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

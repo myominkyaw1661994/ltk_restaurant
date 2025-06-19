@@ -1,35 +1,11 @@
 'use client'
 
-import * as React from "react"
-import { useEffect, useState } from "react"
-import { requestNotificationPermission } from "@/lib/notification"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { ArrowDown, ArrowUp, DollarSign, Package, ShoppingCart } from "lucide-react"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts'
-import { Select } from "@/components/ui/select"
+import React from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { DollarSign, ShoppingCart, TrendingUp } from 'lucide-react'
+import { requestNotificationPermission } from '@/lib/notification'
+import { api } from '@/lib/api-client'
 
 interface DashboardSummary {
   totalSales: number
@@ -55,7 +31,7 @@ interface DashboardSummary {
 }
 
 export default function Home() {
-  const [summary, setSummary] = useState<DashboardSummary>({
+  const [summary, setSummary] = React.useState<DashboardSummary>({
     totalSales: 0,
     totalPurchases: 0,
     profit: 0,
@@ -63,15 +39,12 @@ export default function Home() {
     recentPurchases: [],
     monthlyData: []
   })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+  const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth())
+  const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear())
 
-  // Month/year selection state
-  const now = new Date()
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth())
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
-
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
@@ -86,28 +59,26 @@ export default function Home() {
         }
 
         // Fetch sales
-        const salesResponse = await fetch('/api/v1/sale?page=1&pageSize=1000')
-        if (!salesResponse.ok) {
-          throw new Error('Failed to fetch sales')
+        const salesResponse = await api.get<{sales: any[]}>('/api/v1/sale', { page: '1', pageSize: '1000' });
+        if (!salesResponse.success) {
+          throw new Error(salesResponse.error || 'Failed to fetch sales');
         }
-        const salesData = await salesResponse.json()
 
         // Fetch purchases
-        const purchasesResponse = await fetch('/api/v1/purchase?page=1&pageSize=1000')
-        if (!purchasesResponse.ok) {
-          throw new Error('Failed to fetch purchases')
+        const purchasesResponse = await api.get<{purchases: any[]}>('/api/v1/purchase', { page: '1', pageSize: '1000' });
+        if (!purchasesResponse.success) {
+          throw new Error(purchasesResponse.error || 'Failed to fetch purchases');
         }
-        const purchasesData = await purchasesResponse.json()
 
         // Process data for the chart
-        const monthlyData = processMonthlyData(salesData.sales, purchasesData.purchases)
+        const monthlyData = processMonthlyData(salesResponse.data!.sales, purchasesResponse.data!.purchases)
 
         setSummary({
           totalSales: 0, // will be recalculated below
           totalPurchases: 0,
           profit: 0,
-          recentSales: salesData.sales,
-          recentPurchases: purchasesData.purchases,
+          recentSales: salesResponse.data!.sales,
+          recentPurchases: purchasesResponse.data!.purchases,
           monthlyData
         })
       } catch (err) {
@@ -283,19 +254,15 @@ export default function Home() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Profit/Loss</CardTitle>
-            {profit >= 0 ? (
-              <ArrowUp className="h-4 w-4 text-green-500" />
-            ) : (
-              <ArrowDown className="h-4 w-4 text-red-500" />
-            )}
+            <CardTitle className="text-sm font-medium">Profit</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            <div className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatCurrency(profit)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Net profit/loss
+              Net profit (sales - purchases)
             </p>
           </CardContent>
         </Card>
@@ -304,93 +271,65 @@ export default function Home() {
       {/* Chart */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Monthly Overview</CardTitle>
-          <CardDescription>
-            Sales and purchases over the last 6 months
-          </CardDescription>
+          <CardTitle>Monthly Sales vs Purchases</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={summary.monthlyData}
-                margin={{
-                  top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value: number) => formatCurrency(value)} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="sales" name="Sales" fill="#22c55e" />
-                <Bar dataKey="purchases" name="Purchases" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={summary.monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip content={<CustomTooltip />} />
+              <Line type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={2} name="Sales" />
+              <Line type="monotone" dataKey="purchases" stroke="#3b82f6" strokeWidth={2} name="Purchases" />
+            </LineChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
 
       {/* Recent Transactions */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Recent Sales</CardTitle>
-            <CardDescription>
-              Latest 5 sales transactions
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSales.map((sale) => (
-                  <TableRow key={sale.id}>
-                    <TableCell>{formatDate(sale.created_at)}</TableCell>
-                    <TableCell>{sale.customer_name || 'N/A'}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(sale.total_amount)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="space-y-2">
+              {filteredSales.slice(0, 5).map((sale) => (
+                <div key={sale.id} className="flex justify-between items-center p-2 border rounded">
+                  <div>
+                    <p className="font-medium">{sale.customer_name || 'Anonymous'}</p>
+                    <p className="text-sm text-gray-500">{formatDate(sale.created_at)}</p>
+                  </div>
+                  <p className="font-semibold text-green-600">{formatCurrency(sale.total_amount)}</p>
+                </div>
+              ))}
+              {filteredSales.length === 0 && (
+                <p className="text-gray-500 text-center py-4">No sales for selected period</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Recent Purchases</CardTitle>
-            <CardDescription>
-              Latest 5 purchase transactions
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPurchases.map((purchase) => (
-                  <TableRow key={purchase.id}>
-                    <TableCell>{formatDate(purchase.created_at)}</TableCell>
-                    <TableCell>{purchase.name}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(purchase.total_amount)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="space-y-2">
+              {filteredPurchases.slice(0, 5).map((purchase) => (
+                <div key={purchase.id} className="flex justify-between items-center p-2 border rounded">
+                  <div>
+                    <p className="font-medium">{purchase.name}</p>
+                    <p className="text-sm text-gray-500">{formatDate(purchase.created_at)}</p>
+                  </div>
+                  <p className="font-semibold text-blue-600">{formatCurrency(purchase.total_amount)}</p>
+                </div>
+              ))}
+              {filteredPurchases.length === 0 && (
+                <p className="text-gray-500 text-center py-4">No purchases for selected period</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

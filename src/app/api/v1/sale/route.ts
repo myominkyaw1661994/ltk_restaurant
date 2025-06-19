@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, orderBy, limit, startAfter, getCountFromServer, DocumentSnapshot, where } from 'firebase/firestore';
 import { sendNotification } from '@/lib/notification';
@@ -21,15 +21,27 @@ interface Sale {
   notes?: string;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Get user info from middleware headers
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+
+    // Additional authentication check
+    if (!userId || !userRole) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { items, customer_name, table_number, notes } = body;
 
     // Validate the request body
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
-        { error: 'Sale items are required and must be a non-empty array' },
+        { success: false, error: 'Sale items are required and must be a non-empty array' },
         { status: 400 }
       );
     }
@@ -38,14 +50,14 @@ export async function POST(request: Request) {
     for (const item of items) {
       if (!item.product_id || !item.product_name || !item.price || !item.quantity) {
         return NextResponse.json(
-          { error: 'Each item must have product_id, product_name, price, and quantity' },
+          { success: false, error: 'Each item must have product_id, product_name, price, and quantity' },
           { status: 400 }
         );
       }
 
       if (typeof item.price !== 'number' || typeof item.quantity !== 'number') {
         return NextResponse.json(
-          { error: 'Price and quantity must be numbers' },
+          { success: false, error: 'Price and quantity must be numbers' },
           { status: 400 }
         );
       }
@@ -80,6 +92,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       { 
+        success: true,
         message: 'Sale created successfully',
         sale: {
           id: docRef.id,
@@ -92,14 +105,26 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating sale:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    // Get user info from middleware headers
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+
+    // Additional authentication check
+    if (!userId || !userRole) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
@@ -136,6 +161,7 @@ export async function GET(request: Request) {
       }));
 
       return NextResponse.json({
+        success: true,
         message: 'Sales retrieved successfully',
         sales,
         pagination: {
@@ -150,14 +176,14 @@ export async function GET(request: Request) {
     } catch (firestoreError) {
       console.error('Firestore error:', firestoreError);
       return NextResponse.json(
-        { error: 'Database error', details: firestoreError instanceof Error ? firestoreError.message : 'Unknown error' },
+        { success: false, error: 'Database error', details: firestoreError instanceof Error ? firestoreError.message : 'Unknown error' },
         { status: 500 }
       );
     }
   } catch (error) {
     console.error('Error in sales API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { success: false, error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
