@@ -55,6 +55,9 @@ export const setAuthData = (authData: AuthData): void => {
   
   // Also store token in cookie for middleware access
   setCookie('auth_token', authData.token, 1); // 1 day expiry
+  
+  // Dispatch custom event to notify other components to re-render
+  window.dispatchEvent(new Event('authStateChanged'));
 };
 
 // Clear auth data from localStorage and cookies
@@ -66,12 +69,21 @@ export const clearAuthData = (): void => {
   
   // Also remove cookie
   removeCookie('auth_token');
+  
+  // Dispatch custom event to notify other components to re-render
+  window.dispatchEvent(new Event('authStateChanged'));
 };
 
 // Get current user
 export const getCurrentUser = (): User | null => {
   const authData = getAuthData();
   return authData?.user || null;
+};
+
+// Get user role
+export const getUserRole = (): string => {
+  const user = getCurrentUser();
+  return user?.role || '';
 };
 
 // Get auth token

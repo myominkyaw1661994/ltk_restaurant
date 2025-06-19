@@ -41,6 +41,9 @@ export default function AuthPage() {
           user: loginData.data.user
         });
 
+        // Dispatch custom event to notify other components (like Navbar) to re-render
+        window.dispatchEvent(new Event('authStateChanged'));
+
         toast.success("Login successful!");
         router.push("/");
       } else {
