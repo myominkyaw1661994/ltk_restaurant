@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import { getCurrentUser } from '@/lib/auth'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -32,8 +33,24 @@ export default function EditPurchasePage() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [items, setItems] = useState<PurchaseItem[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to edit purchases.",
+        variant: "destructive",
+      });
+      router.push('/purchase');
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true)
@@ -57,7 +74,7 @@ export default function EditPurchasePage() {
       }
     }
     fetchData()
-  }, [params.id])
+  }, [params.id, router])
 
   const handleItemChange = (idx: number, field: keyof PurchaseItem, value: any) => {
     setItems(items => items.map((item, i) =>

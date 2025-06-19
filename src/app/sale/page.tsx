@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { getCurrentUser } from '@/lib/auth'
 import { Plus, ChevronLeft, ChevronRight, Eye, Pencil, Trash2, Check } from "lucide-react"
 import { collection, getDocs, query, orderBy, limit, startAfter, getCountFromServer } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -59,6 +60,7 @@ export default function SalePage() {
   const [error, setError] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -75,6 +77,11 @@ export default function SalePage() {
   // Sorting state
   const [sortBy, setSortBy] = useState<'date' | 'total' | null>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  // Check if user can perform admin actions (not staff)
+  const canPerformAdminActions = () => {
+    return currentUser && currentUser.role !== 'Staff';
+  };
 
   const fetchSales = async (page: number, size: number) => {
     try {
@@ -125,6 +132,10 @@ export default function SalePage() {
 
   // Fetch sales when component mounts or when page/size changes
   useEffect(() => {
+    // Get current user on component mount
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
     fetchSales(currentPage, pageSize)
   }, [currentPage, pageSize])
 
@@ -251,10 +262,12 @@ export default function SalePage() {
     <div className="container mx-auto py-10 px-2 sm:px-0">
       <div className="flex justify-between items-center mb-6 flex-col sm:flex-row gap-4 sm:gap-0">
         <h1 className="text-3xl font-bold">Sales</h1>
-        <Button onClick={() => router.push('/sale/new')} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Sale
-        </Button>
+        {canPerformAdminActions() && (
+          <Button onClick={() => router.push('/sale/new')} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Sale
+          </Button>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -351,16 +364,16 @@ export default function SalePage() {
                     {formatCurrency(sale.total_amount)}
                   </TableCell>
                   <TableCell className="text-right flex flex-row flex-wrap gap-1 justify-end">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleMarkCompleted(sale)}
-                      className="mr-1"
-                      aria-label="Mark as Completed"
-                      disabled={sale.status === 'completed'}
-                    >
-                      <Check className={`h-5 w-5 ${sale.status === 'completed' ? 'text-green-400' : ''}`} />
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleMarkCompleted(sale)}
+                        className="mr-1"
+                        aria-label="Mark as Completed"
+                        disabled={sale.status === 'completed'}
+                      >
+                        <Check className={`h-5 w-5 ${sale.status === 'completed' ? 'text-green-400' : ''}`} />
+                      </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -370,7 +383,7 @@ export default function SalePage() {
                     >
                       <Eye className="h-5 w-5" />
                     </Button>
-                    {sale.status !== 'completed' && (
+                    {canPerformAdminActions() && sale.status !== 'completed' && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -381,7 +394,7 @@ export default function SalePage() {
                         <Pencil className="h-5 w-5" />
                       </Button>
                     )}
-                    {sale.status !== 'completed' && (
+                    {canPerformAdminActions() && sale.status !== 'completed' && (
                       <Button
                         variant="ghost"
                         size="icon"

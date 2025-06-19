@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { getCurrentUser } from '@/lib/auth'
 import {
   Table,
   TableBody,
@@ -72,6 +73,7 @@ export default function PurchaseList() {
   const [error, setError] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [purchaseToDelete, setPurchaseToDelete] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [pagination, setPagination] = useState<PaginationData>({
     currentPage: 1,
     pageSize: 10,
@@ -80,6 +82,11 @@ export default function PurchaseList() {
     hasNextPage: false,
     hasPreviousPage: false
   })
+
+  // Check if user can perform admin actions (not staff)
+  const canPerformAdminActions = () => {
+    return currentUser && currentUser.role !== 'Staff';
+  };
 
   const fetchPurchases = async (page: number, pageSize: number) => {
     try {
@@ -109,6 +116,10 @@ export default function PurchaseList() {
   }
 
   useEffect(() => {
+    // Get current user on component mount
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
     fetchPurchases(pagination.currentPage, pagination.pageSize)
   }, [pagination.currentPage, pagination.pageSize])
 
@@ -185,9 +196,11 @@ export default function PurchaseList() {
     <div className="container mx-auto py-10 px-2 sm:px-0">
       <div className="flex justify-between items-center mb-6 flex-col sm:flex-row gap-4 sm:gap-0">
         <h1 className="text-3xl font-bold">Purchases</h1>
-        <Button onClick={() => router.push('/purchase/new')} className="w-full sm:w-auto">
-          Add Purchase
-        </Button>
+        {canPerformAdminActions() && (
+          <Button onClick={() => router.push('/purchase/new')} className="w-full sm:w-auto">
+            Add Purchase
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -226,21 +239,25 @@ export default function PurchaseList() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push(`/purchase/edit/${purchase.id}`)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => confirmDelete(purchase.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canPerformAdminActions() && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/purchase/edit/${purchase.id}`)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => confirmDelete(purchase.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

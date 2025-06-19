@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { getCurrentUser } from '@/lib/auth'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,8 +36,24 @@ export default function NewSalePage() {
   const [status, setStatus] = useState<'pending' | 'completed' | 'cancelled'>("pending")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<SaleItem[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to create sales.",
+        variant: "destructive",
+      });
+      router.push('/sale');
+      return;
+    }
+
     const fetchProducts = async () => {
       try {
         setLoading(true)
@@ -64,7 +81,7 @@ export default function NewSalePage() {
       }
     }
     fetchProducts()
-  }, [])
+  }, [router])
 
   // useEffect(() => {
   //   // Request notification permission when page loads

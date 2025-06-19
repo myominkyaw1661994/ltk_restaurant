@@ -96,7 +96,7 @@ export default function Navbar() {
           </h1>
 
           {/* Navigation Links - Only show for authenticated users */}
-          {isLoggedIn && (userRole === 'staff' || userRole === 'admin') && (
+          {isLoggedIn && (userRole === 'Staff' || userRole === 'Admin') && (
             <div className="hidden md:flex items-center space-x-4">
               <Link
                 href="/product"
@@ -171,7 +171,7 @@ export default function Navbar() {
                       </DropdownMenuItem>
                       
                       {/* Navigation items for staff/admin */}
-                      {(userRole === 'staff' || userRole === 'admin') && (
+                      {(userRole === 'Staff' || userRole === 'Admin') && (
                         <>
                           <DropdownMenuItem onClick={() => router.push("/product")}>
                             <Package className="h-4 w-4 mr-2" />
@@ -193,7 +193,7 @@ export default function Navbar() {
                       )}
                       
                       {/* User management - only for admin */}
-                      {userRole === 'admin' && (
+                      {userRole === 'Admin' && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => router.push("/users")}>

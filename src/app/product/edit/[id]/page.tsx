@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/components/ui/use-toast";
 
 interface Product {
   id: string;
@@ -24,12 +26,28 @@ export default function ProductEdit({ params }: PageProps) {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     product_name: '',
     price: ''
   });
 
   useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to edit products.",
+        variant: "destructive",
+      });
+      router.push('/product');
+      return;
+    }
+
     const fetchProduct = async () => {
       if (!params.id) {
         console.error('No product ID provided');
@@ -61,7 +79,7 @@ export default function ProductEdit({ params }: PageProps) {
     };
 
     fetchProduct();
-  }, [params.id]);
+  }, [params.id, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

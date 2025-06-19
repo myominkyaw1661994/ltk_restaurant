@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import { getCurrentUser } from '@/lib/auth'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -45,8 +46,24 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
   const [status, setStatus] = useState<Sale['status']>("pending")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<SaleItem[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to edit sales.",
+        variant: "destructive",
+      });
+      router.push('/sale');
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true)
@@ -72,7 +89,7 @@ export default function EditSalePage({ params }: { params: { id: string } }) {
       }
     }
     fetchData()
-  }, [id])
+  }, [id, router])
 
   const handleItemChange = (idx: number, field: keyof SaleItem, value: any) => {
     setItems(items => items.map((item, i) =>

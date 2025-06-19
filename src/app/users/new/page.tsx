@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getCurrentUser } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { getAuthHeaders } from "@/lib/auth";
+import { toast } from "@/components/ui/use-toast";
 
 export default function NewUserPage() {
   const router = useRouter();
@@ -20,6 +22,24 @@ export default function NewUserPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to create users.",
+        variant: "destructive",
+      });
+      router.push('/');
+      return;
+    }
+  }, [router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

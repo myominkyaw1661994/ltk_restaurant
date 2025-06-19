@@ -1,15 +1,35 @@
 'use client'
 
 import { Input } from '@/components/ui/input';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Contact() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({ product_name: '', price: '', type: 'sale' });
   const [error, setError] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to create products.",
+        variant: "destructive",
+      });
+      router.push('/product');
+      return;
+    }
+  }, [router]);
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;

@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { getCurrentUser } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 export default function EditUserPage() {
   const router = useRouter();
@@ -23,10 +25,26 @@ export default function EditUserPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to edit users.",
+        variant: "destructive",
+      });
+      router.push('/');
+      return;
+    }
+
     fetchUser();
-  }, [userId]);
+  }, [userId, router]);
 
   const fetchUser = async () => {
     try {

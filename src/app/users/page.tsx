@@ -4,19 +4,37 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { getCurrentUser } from '@/lib/auth';
 import { DataTable } from "./data-table";
 import { columns, User } from "./columns";
 import { getWithAuth } from "@/lib/fetch-with-auth";
+import { toast } from "@/components/ui/use-toast";
 
 export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    // Check user role first
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    
+    // Redirect staff users
+    if (user && user.role === 'Staff') {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access user management.",
+        variant: "destructive",
+      });
+      router.push('/');
+      return;
+    }
+
     fetchUsers();
-  }, []);
+  }, [router]);
 
   const fetchUsers = async () => {
     try {

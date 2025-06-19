@@ -71,6 +71,11 @@ export default function POSPage() {
   )
 
   const addToCart = (product: Product) => {
+    // Add haptic feedback for mobile devices
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50); // Short vibration (50ms)
+    }
+    
     setCartItems(currentItems => {
       const existingItem = currentItems.find(item => item.product_id === product.id)
       if (existingItem) {
@@ -188,35 +193,9 @@ export default function POSPage() {
     <div className="container mx-auto py-10 px-4">
       <h1 className="text-2xl font-bold mb-6">Point of Sale</h1>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left side - Products */}
-        <div className="space-y-4">
-          <Input
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="mb-4"
-          />
-          <div className="h-[calc(100vh-200px)] overflow-y-auto pr-2">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => addToCart(product)}
-                >
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-lg">{product.product_name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-lg font-bold">{product.price} MMK</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
+       
 
-        {/* Right side - Cart */}
+        {/* Left side - Cart */}
         <div className="space-y-4">
           <Card className="h-[calc(100vh-200px)] overflow-y-auto">
             <CardHeader>
@@ -346,6 +325,34 @@ export default function POSPage() {
               </form>
             </CardContent>
           </Card>
+        </div>
+
+         {/* Right side - Products */}
+         <div className="space-y-4">
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="mb-4"
+          />
+          <div className="h-[calc(100vh-200px)] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {filteredProducts.map((product) => (
+                <Card
+                  key={product.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => addToCart(product)}
+                >
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-lg">{product.product_name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <p className="text-lg font-bold">{product.price} MMK</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
