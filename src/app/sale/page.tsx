@@ -73,6 +73,7 @@ export default function SalePage() {
   // Filter state
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterCustomer, setFilterCustomer] = useState<string>('')
+  const [filterToday, setFilterToday] = useState<boolean>(false)
 
   // Sorting state
   const [sortBy, setSortBy] = useState<'date' | 'total' | null>('date')
@@ -233,7 +234,16 @@ export default function SalePage() {
   let filteredSales = sales.filter(sale => {
     const statusMatch = filterStatus === 'all' || sale.status === filterStatus
     const customerMatch = filterCustomer === '' || (sale.customer_name || '').toLowerCase().includes(filterCustomer.toLowerCase())
-    return statusMatch && customerMatch
+    
+    // Today filter
+    let todayMatch = true
+    if (filterToday) {
+      const saleDate = new Date(sale.created_at)
+      const today = new Date()
+      todayMatch = saleDate.toDateString() === today.toDateString()
+    }
+    
+    return statusMatch && customerMatch && todayMatch
   })
 
   if (sortBy) {
@@ -295,6 +305,16 @@ export default function SalePage() {
             value={filterCustomer}
             onChange={e => setFilterCustomer(e.target.value)}
           />
+        </div>
+        <div className="flex gap-2 items-center w-full sm:w-auto">
+          <Button
+            variant={filterToday ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilterToday(!filterToday)}
+            className="w-full sm:w-auto"
+          >
+            Today
+          </Button>
         </div>
       </div>
 
