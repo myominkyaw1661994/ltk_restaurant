@@ -270,37 +270,7 @@ const DetailPage = ({ params }: DetailPageProps) => {
           </TableFooter>
         </Table>
       </div>
-      {/* <div className="mt-10 print-hide">
-        <Table>
-          <TableCaption>Sale Items</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sale.items.map((item) => (
-              <TableRow key={item.product_id}>
-                <TableCell className="font-medium">{item.product_name}</TableCell>
-                <TableCell>{formatCurrency(item.price)}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.total)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TableCell colSpan={3}>Total Amount</TableCell>
-              <TableCell className="text-right font-bold">
-                {formatCurrency(sale.total_amount)}
-              </TableCell>
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </div> */}
+      <div className="w-[100px] h-[200px]"></div>
     </div>
   )
 }
