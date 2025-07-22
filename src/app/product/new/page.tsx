@@ -5,14 +5,32 @@ import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export default function Contact() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [formData, setFormData] = useState({ product_name: '', price: '', type: 'sale' });
+  const [formData, setFormData] = useState({ 
+    product_name: '', 
+    price: '', 
+    type: 'sale',
+    category: 'food' // Default category
+  });
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Category options
+  const categories = [
+    { value: 'food', label: 'Food' },
+    { value: 'beverage', label: 'Beverage' },
+    { value: 'dessert', label: 'Dessert' },
+    { value: 'appetizer', label: 'Appetizer' },
+    { value: 'main-course', label: 'Main Course' },
+    { value: 'side-dish', label: 'Side Dish' },
+    { value: 'snack', label: 'Snack' },
+    { value: 'ingredient', label: 'Ingredient' },
+    { value: 'other', label: 'Other' }
+  ];
 
   useEffect(() => {
     // Check user role first
@@ -21,11 +39,7 @@ export default function Contact() {
     
     // Redirect staff users
     if (user && user.role === 'Staff') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to create products.",
-        variant: "destructive",
-      });
+      toast.error("You don't have permission to create products.");
       router.push('/product');
       return;
     }
@@ -39,6 +53,10 @@ export default function Contact() {
 
   const handleTypeChange = (value: string) => {
     setFormData((prev) => ({ ...prev, type: value }));
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, category: value }));
   };
 
   const validateForm = () => {
@@ -55,6 +73,11 @@ export default function Contact() {
 
     if (!['sale', 'purchase'].includes(formData.type)) {
       setError('Please select a valid product type');
+      return false;
+    }
+
+    if (!formData.category) {
+      setError('Please select a category');
       return false;
     }
 
@@ -79,7 +102,8 @@ export default function Contact() {
           body: JSON.stringify({
             product_name: formData.product_name,
             price: parseInt(formData.price),
-            type: formData.type
+            type: formData.type,
+            category: formData.category
           }),
         });
 
@@ -90,12 +114,14 @@ export default function Contact() {
         }
 
         // Clear form after successful submission
-        setFormData({ product_name: '', price: '', type: 'sale' });
+        setFormData({ product_name: '', price: '', type: 'sale', category: 'food' });
         
+        toast.success('Product created successfully!');
         // Redirect to products page
         router.push('/product');
       } catch (err: any) {
         setError(err.message || 'Failed to create product. Please try again.');
+        toast.error('Failed to create product');
         console.error('Error:', err);
       }
     });
@@ -137,6 +163,26 @@ export default function Contact() {
           <SelectContent>
             <SelectItem value="sale">For Sale</SelectItem>
             <SelectItem value="purchase">For Purchase</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <label htmlFor="category" className="block mb-1 font-medium">Category</label>
+        <Select
+          value={formData.category}
+          onValueChange={handleCategoryChange}
+          disabled={isPending}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={category.value} value={category.value}>
+                {category.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

@@ -90,38 +90,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { product_name, price, type } = await request.json();
+    const { product_name, price, type, category } = await request.json();
 
-    if (!product_name || typeof price !== 'number' || !type) {
+    if (!product_name || typeof price !== 'number' || !type || !category) {
       return NextResponse.json(
-        { success: false, error: 'Product name, price, and type are required' },
+        { success: false, error: 'Product name, price, type, and category are required' },
         { status: 400 }
       );
     }
 
-    if (!['sale', 'purchase'].includes(type)) {
+    // Validate category
+    const validCategories = ['food', 'beverage', 'dessert', 'appetizer', 'main-course', 'side-dish', 'snack', 'ingredient', 'other'];
+    if (!validCategories.includes(category)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid product type' },
+        { success: false, error: 'Invalid category selected' },
         { status: 400 }
       );
     }
 
-    const productsRef = collection(db, 'products');
-    const newProduct = {
+    // Create product data
+    const productData = {
       product_name,
       price,
       type,
-      created_at: serverTimestamp()
+      category,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
     };
 
-    const docRef = await addDoc(productsRef, newProduct);
+    // Add to Firestore
+    const docRef = await addDoc(collection(db, 'products'), productData);
 
     return NextResponse.json({
       success: true,
-      id: docRef.id,
-      ...newProduct,
-      created_at: new Date().toISOString()
-    });
+      message: 'Product created successfully',
+      data: {
+        id: docRef.id,
+        ...productData
+      }
+    }, { status: 201 });
+
   } catch (error) {
     console.error('Error creating product:', error);
     return NextResponse.json(

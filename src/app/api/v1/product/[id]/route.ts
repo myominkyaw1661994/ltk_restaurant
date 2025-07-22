@@ -40,7 +40,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { product_name, price } = body;
+    const { product_name, price, category, type } = body;
 
     // Validate the request body
     if (!product_name || typeof product_name !== 'string') {
@@ -53,6 +53,29 @@ export async function PUT(
     if (!price || typeof price !== 'number' || !Number.isInteger(price)) {
       return NextResponse.json(
         { error: 'Price is required and must be an integer' },
+        { status: 400 }
+      );
+    }
+
+    if (!category || typeof category !== 'string') {
+      return NextResponse.json(
+        { error: 'Category is required and must be a string' },
+        { status: 400 }
+      );
+    }
+
+    if (!type || !['sale', 'purchase'].includes(type)) {
+      return NextResponse.json(
+        { error: 'Type is required and must be either "sale" or "purchase"' },
+        { status: 400 }
+      );
+    }
+
+    // Validate category
+    const validCategories = ['food', 'beverage', 'dessert', 'appetizer', 'main-course', 'side-dish', 'snack', 'ingredient', 'other'];
+    if (!validCategories.includes(category)) {
+      return NextResponse.json(
+        { error: 'Invalid category selected' },
         { status: 400 }
       );
     }
@@ -70,6 +93,8 @@ export async function PUT(
     await updateDoc(productRef, {
       product_name,
       price,
+      category,
+      type,
       updated_at: new Date().toISOString()
     });
 
@@ -79,6 +104,8 @@ export async function PUT(
         id: id,
         product_name,
         price,
+        category,
+        type,
         updated_at: new Date().toISOString()
       }
     });

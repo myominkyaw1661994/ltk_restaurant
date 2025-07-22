@@ -19,6 +19,7 @@ interface Product {
   id: string;
   product_name: string;
   price: number;
+  category: string;
   created_at: string;
   type: 'sale' | 'purchase';
 }

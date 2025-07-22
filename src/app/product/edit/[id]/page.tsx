@@ -6,12 +6,15 @@ import { getCurrentUser } from '@/lib/auth';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
   product_name: string;
   price: number;
+  category: string;
+  type: 'sale' | 'purchase';
   created_at: string;
 }
 
@@ -29,9 +32,24 @@ export default function ProductEdit({ params }: PageProps) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     product_name: '',
-    price: ''
+    price: '',
+    category: 'food',
+    type: 'sale' as 'sale' | 'purchase'
   });
   const [productId, setProductId] = useState<string>('');
+
+  // Category options
+  const categories = [
+    { value: 'food', label: 'Food' },
+    { value: 'beverage', label: 'Beverage' },
+    { value: 'dessert', label: 'Dessert' },
+    { value: 'appetizer', label: 'Appetizer' },
+    { value: 'main-course', label: 'Main Course' },
+    { value: 'side-dish', label: 'Side Dish' },
+    { value: 'snack', label: 'Snack' },
+    { value: 'ingredient', label: 'Ingredient' },
+    { value: 'other', label: 'Other' }
+  ];
 
   useEffect(() => {
     // Initialize params
@@ -51,11 +69,7 @@ export default function ProductEdit({ params }: PageProps) {
     
     // Redirect staff users
     if (user && user.role === 'Staff') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to edit products.",
-        variant: "destructive",
-      });
+      toast.error("You don't have permission to edit products.");
       router.push('/product');
       return;
     }
@@ -80,7 +94,9 @@ export default function ProductEdit({ params }: PageProps) {
         setProduct(data.product);
         setFormData({
           product_name: data.product.product_name,
-          price: data.product.price.toString()
+          price: data.product.price.toString(),
+          category: data.product.category || 'food',
+          type: data.product.type || 'sale'
         });
       } catch (err: any) {
         console.error('Error fetching product:', err);
@@ -98,7 +114,6 @@ export default function ProductEdit({ params }: PageProps) {
     setLoading(true);
 
     try {
-      console.log('Updating product with data:', formData);
       const response = await fetch(`/api/v1/product/${productId}`, {
         method: 'PUT',
         headers: {
@@ -106,7 +121,9 @@ export default function ProductEdit({ params }: PageProps) {
         },
         body: JSON.stringify({
           product_name: formData.product_name,
-          price: parseInt(formData.price)
+          price: parseInt(formData.price),
+          category: formData.category,
+          type: formData.type
         }),
       });
 
@@ -116,12 +133,12 @@ export default function ProductEdit({ params }: PageProps) {
         throw new Error(data.error || 'Failed to update product');
       }
 
-      console.log('Product updated successfully:', data);
+      toast.success('Product updated successfully!');
       router.push('/product');
-      router.refresh();
     } catch (err: any) {
       console.error('Error updating product:', err);
       setError(err.message || 'Failed to update product');
+      toast.error('Failed to update product');
     } finally {
       setLoading(false);
     }
@@ -177,6 +194,39 @@ export default function ProductEdit({ params }: PageProps) {
                 min="0"
                 placeholder="Enter price"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="category" className="text-sm font-medium">
+                Category
+              </label>
+              <Select onValueChange={(value) => setFormData({ ...formData, category: value })} value={formData.category} defaultValue="food">
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="type" className="text-sm font-medium">
+                Type
+              </label>
+              <Select onValueChange={(value) => setFormData({ ...formData, type: value as 'sale' | 'purchase' })} value={formData.type} defaultValue="sale">
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sale">Sale</SelectItem>
+                  <SelectItem value="purchase">Purchase</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {error && (

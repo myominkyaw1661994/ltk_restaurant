@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -25,6 +25,7 @@ interface Product {
   id: string
   product_name: string
   price: number
+  category: string
 }
 
 type SaleStatus = 'pending' | 'completed' | 'cancelled'
@@ -41,8 +42,23 @@ export default function POSPage() {
   const [status, setStatus] = useState<SaleStatus>("pending")
   const [cartItems, setCartItems] = useState<SaleItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [saleDetails, setSaleDetails] = useState<any>(null)
+
+  // Category options
+  const categories = [
+    { value: 'all', label: 'All Categories' },
+    { value: 'food', label: 'Food' },
+    { value: 'beverage', label: 'Beverage' },
+    { value: 'dessert', label: 'Dessert' },
+    { value: 'appetizer', label: 'Appetizer' },
+    { value: 'main-course', label: 'Main Course' },
+    { value: 'side-dish', label: 'Side Dish' },
+    { value: 'snack', label: 'Snack' },
+    { value: 'ingredient', label: 'Ingredient' },
+    { value: 'other', label: 'Other' }
+  ]
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -66,9 +82,11 @@ export default function POSPage() {
     requestNotificationPermission().catch(console.error)
   }, [])
 
-  const filteredProducts = products.filter(product =>
-    product.product_name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredProducts = products.filter(product => {
+    const nameMatch = product.product_name.toLowerCase().includes(searchQuery.toLowerCase())
+    const categoryMatch = selectedCategory === 'all' || product.category === selectedCategory
+    return nameMatch && categoryMatch
+  })
 
   const addToCart = (product: Product) => {
     // Add haptic feedback for mobile devices
@@ -115,11 +133,7 @@ export default function POSPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (cartItems.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please add items to cart",
-        variant: "destructive",
-      })
+      toast.error("Please add items to cart")
       return
     }
 
@@ -198,13 +212,25 @@ export default function POSPage() {
         
         {/* Products Section - Show first on mobile */}
         <div className="order-1 lg:order-2 space-y-3 sm:space-y-4">
-          <div className="sticky top-0 z-10  pb-2">
+          <div className="sticky top-0 z-10 space-y-2 pb-2">
             <Input
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full text-base"
             />
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full text-base">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="h-[40vh] lg:h-[calc(100vh-300px)] overflow-y-auto pr-1">
