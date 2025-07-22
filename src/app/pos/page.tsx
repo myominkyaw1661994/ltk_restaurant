@@ -177,7 +177,8 @@ export default function POSPage() {
       setNotes("")
       // Don't reset status - keep the user's selection for the next sale
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
     } finally {
       setSaving(false)
     }
@@ -201,7 +202,6 @@ export default function POSPage() {
   }
 
   if (loading) return <div className="mt-5">Loading...</div>
-  if (error) return <div className="mt-5 text-red-600">Error: {error}</div>
 
   return (
     <div className="container mx-auto py-4 px-2 sm:py-10 sm:px-4">
@@ -428,7 +428,7 @@ export default function POSPage() {
             <div className="space-y-4">
               <div id="print-content" className="space-y-4">
                 <div className="text-center mb-4">
-                  <h2 className="text-lg sm:text-xl font-bold">Rest LTK</h2>
+                  <h2 className="text-lg sm:text-xl font-bold">Restaurant Management System</h2>
                   <p className="text-xs sm:text-sm text-gray-500">Thank you for your business!</p>
                 </div>
 
@@ -575,7 +575,7 @@ export default function POSPage() {
                         </head>
                         <body>
                           <div class="receipt-header">
-                            <h2>Rest LTK</h2>
+                            <h2>Restaurant Management System</h2>
                             <p>Thank you for your business!</p>
                           </div>
                           <hr/>

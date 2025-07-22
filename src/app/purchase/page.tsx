@@ -37,7 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Eye, Plus, Pencil, Trash2 } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
 interface PurchaseItem {
   product_id: string
@@ -67,7 +67,7 @@ interface PaginationData {
 
 export default function PurchaseList() {
   const router = useRouter()
-  const { toast } = useToast()
+
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -105,11 +105,7 @@ export default function PurchaseList() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'
       setError(errorMessage)
-      toast({
-        title: "Error",
-        description: "Failed to fetch purchases",
-        variant: "destructive",
-      })
+      toast.error("Failed to fetch purchases")
     } finally {
       setLoading(false)
     }
@@ -159,20 +155,13 @@ export default function PurchaseList() {
         throw new Error(data.error || 'Failed to delete purchase')
       }
 
-      toast({
-        title: "Success",
-        description: "Purchase deleted successfully",
-      })
+      toast.success("Purchase deleted successfully")
 
       // Refresh the list
       fetchPurchases(pagination.currentPage, pagination.pageSize)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      toast.error(errorMessage)
     } finally {
       setDeleteDialogOpen(false)
       setPurchaseToDelete(null)

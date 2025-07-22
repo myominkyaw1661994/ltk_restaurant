@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import FloatingMenu from '../components/FloatingMenu';
 import Navbar from '../components/Navbar';
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "sonner"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

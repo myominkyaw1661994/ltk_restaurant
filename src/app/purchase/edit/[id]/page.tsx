@@ -212,7 +212,7 @@ export default function EditPurchasePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+        <div>
                 <label className="block text-sm font-medium mb-2">Purchase Name *</label>
                 <Input
                   value={name}
@@ -221,8 +221,8 @@ export default function EditPurchasePage() {
                   required
                   className="w-full"
                 />
-              </div>
-              <div>
+        </div>
+        <div>
                 <label className="block text-sm font-medium mb-2">Description</label>
                 <Textarea
                   value={description}
@@ -284,10 +284,10 @@ export default function EditPurchasePage() {
                     {/* Product Selection */}
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium mb-1">Product *</label>
-                      <select
+                    <select
                         className="w-full border rounded-md px-3 py-2 text-sm"
-                        value={item.product_id}
-                        onChange={e => handleProductChange(idx, e.target.value)}
+                      value={item.product_id}
+                      onChange={e => handleProductChange(idx, e.target.value)}
                         required
                       >
                         <option value="">Select a product</option>
@@ -295,37 +295,37 @@ export default function EditPurchasePage() {
                           <option key={product.id} value={product.id}>
                             {product.product_name} - ${product.price}
                           </option>
-                        ))}
-                      </select>
+                      ))}
+                    </select>
                     </div>
 
                     {/* Price */}
                     <div>
                       <label className="block text-sm font-medium mb-1">Price</label>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                        <Input
-                          type="number"
-                          value={item.price}
-                          min={0}
+                        {/* <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" /> */}
+                    <Input
+                      type="number"
+                      value={item.price}
+                      min={0}
                           step={0.01}
-                          onChange={e => handleItemChange(idx, "price", Number(e.target.value))}
+                      onChange={e => handleItemChange(idx, "price", Number(e.target.value))}
                           className="pl-8"
                           placeholder="0.00"
-                        />
+                    />
                       </div>
                     </div>
 
                     {/* Quantity */}
                     <div>
                       <label className="block text-sm font-medium mb-1">Quantity</label>
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        min={1}
-                        onChange={e => handleItemChange(idx, "quantity", Number(e.target.value))}
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      min={1}
+                      onChange={e => handleItemChange(idx, "quantity", Number(e.target.value))}
                         placeholder="1"
-                      />
+                    />
                     </div>
                   </div>
 
@@ -376,7 +376,7 @@ export default function EditPurchasePage() {
                   </span>
                 </div>
               </div>
-            </div>
+        </div>
           </CardContent>
         </Card>
 

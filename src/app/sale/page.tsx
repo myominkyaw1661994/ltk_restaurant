@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
 interface Sale {
   id: string
@@ -54,7 +54,7 @@ interface Sale {
 
 export default function SalePage() {
   const router = useRouter()
-  const { toast } = useToast()
+
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -121,11 +121,7 @@ export default function SalePage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'
       setError(errorMessage)
-      toast({
-        title: "Error",
-        description: "Failed to fetch sales",
-        variant: "destructive",
-      })
+      toast.error("Failed to fetch sales")
     } finally {
       setLoading(false)
     }
@@ -169,17 +165,10 @@ export default function SalePage() {
         throw new Error('Failed to delete sale')
       }
 
-      toast({
-        title: "Success",
-        description: "Sale deleted successfully",
-      })
+      toast.success("Sale deleted successfully")
       fetchSales(currentPage, pageSize) // Refresh current page
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to delete sale",
-        variant: "destructive",
-      })
+      toast.error("Failed to delete sale")
     } finally {
       setDeleteDialogOpen(false)
       setSaleToDelete(null)
@@ -199,17 +188,10 @@ export default function SalePage() {
       if (!response.ok) {
         throw new Error('Failed to update sale status')
       }
-      toast({
-        title: 'Success',
-        description: 'Sale marked as completed',
-      })
+      toast.success('Sale marked as completed')
       fetchSales(currentPage, pageSize)
     } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update sale status',
-        variant: 'destructive',
-      })
+      toast.error('Failed to update sale status')
     }
   }
 

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
 interface PurchaseItem {
   product_id: string
@@ -45,7 +45,7 @@ interface DetailPageProps {
 
 export default function PurchaseDetail({ params }: DetailPageProps) {
   const router = useRouter()
-  const { toast } = useToast()
+
   const [purchase, setPurchase] = useState<Purchase | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -79,11 +79,7 @@ export default function PurchaseDetail({ params }: DetailPageProps) {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An error occurred'
         setError(errorMessage)
-        toast({
-          title: "Error",
-          description: "Failed to fetch purchase details",
-          variant: "destructive",
-        })
+        toast.error("Failed to fetch purchase details")
       } finally {
         setLoading(false)
       }

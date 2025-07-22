@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { getAuthHeaders } from "@/lib/auth";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export default function NewUserPage() {
   const router = useRouter();
@@ -31,11 +31,7 @@ export default function NewUserPage() {
     
     // Redirect staff users
     if (user && user.role === 'Staff') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to create users.",
-        variant: "destructive",
-      });
+      toast.error("You don't have permission to create users.");
       router.push('/');
       return;
     }

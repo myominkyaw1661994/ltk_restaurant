@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export default function EditUserPage() {
   const router = useRouter();
@@ -34,11 +34,7 @@ export default function EditUserPage() {
     
     // Redirect staff users
     if (user && user.role === 'Staff') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to edit users.",
-        variant: "destructive",
-      });
+      toast.error("You don't have permission to edit users.");
       router.push('/');
       return;
     }

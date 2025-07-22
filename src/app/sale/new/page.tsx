@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { requestNotificationPermission } from '@/lib/notification';
 
@@ -45,11 +45,7 @@ export default function NewSalePage() {
     
     // Redirect staff users
     if (user && user.role === 'Staff') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to create sales.",
-        variant: "destructive",
-      });
+      toast.error("You don't have permission to create sales.");
       router.push('/sale');
       return;
     }
@@ -126,17 +122,17 @@ export default function NewSalePage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to create sale")
-      toast({ title: "Sale created!" })
+              toast.success("Sale created!")
       router.push("/sale")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
     } finally {
       setSaving(false)
     }
   }
 
   if (loading) return <div className="mt-5">Loading...</div>
-  if (error) return <div className="mt-5 text-red-600">Error: {error}</div>
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-2 sm:px-0">

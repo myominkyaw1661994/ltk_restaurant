@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 
 import {
   Card,
@@ -64,7 +64,7 @@ const printStyles = `
 
 const DetailPage = ({ params }: DetailPageProps) => {
   const router = useRouter()
-  const { toast } = useToast()
+
   const [sale, setSale] = useState<Sale | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -101,11 +101,7 @@ const DetailPage = ({ params }: DetailPageProps) => {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An error occurred'
         setError(errorMessage)
-        toast({
-          title: "Error",
-          description: "Failed to fetch sale details",
-          variant: "destructive",
-        })
+        toast.error("Failed to fetch sale details")
       } finally {
         setLoading(false)
       }
@@ -142,11 +138,11 @@ const DetailPage = ({ params }: DetailPageProps) => {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to update status')
-      toast({ title: 'Status updated!', description: 'Sale marked as completed.' })
+              toast.success('Sale marked as completed')
       // Refresh sale details
       setSale({ ...sale, status: 'completed' })
     } catch (err) {
-      toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' })
+              toast.error('Failed to update status')
     }
   }
 

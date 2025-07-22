@@ -92,7 +92,7 @@ export default function Navbar() {
             onClick={() => router.push("/")}
             title="Go to Home"
           >
-            လေထန်ကုန်း
+            Restaurant Management System
           </h1>
 
           {/* Navigation Links - Only show for authenticated users */}

@@ -8,7 +8,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { DataTable } from "./data-table";
 import { columns, User } from "./columns";
 import { getWithAuth } from "@/lib/fetch-with-auth";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export default function UsersPage() {
   const router = useRouter();
@@ -24,11 +24,7 @@ export default function UsersPage() {
     
     // Redirect staff users
     if (user && user.role === 'Staff') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access user management.",
-        variant: "destructive",
-      });
+      toast.error("You don't have permission to access user management.");
       router.push('/');
       return;
     }

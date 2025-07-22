@@ -110,6 +110,14 @@ export default function NewPurchasePage() {
     }
   };
 
+  // Helper function to format numbers with commas
+  const formatNumber = (num: number) => {
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -140,8 +148,9 @@ export default function NewPurchasePage() {
       toast.success("Purchase created successfully!");
       router.push("/purchase");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      toast.error("Failed to create purchase");
+      const errorMessage = err instanceof Error ? err.message : "Failed to create purchase";
+      toast.error(errorMessage);
+      console.log(err);
     } finally {
       setSaving(false);
     }
@@ -160,16 +169,7 @@ export default function NewPurchasePage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto py-10 px-4">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Error: {error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
-        </div>
-      </div>
-    );
-  }
+  // Remove the error handling from render to prevent infinite re-renders
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-4xl">
@@ -212,6 +212,7 @@ export default function NewPurchasePage() {
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Enter purchase description"
                   className="w-full"
+                  required
                   rows={3}
                 />
               </div>
@@ -230,7 +231,7 @@ export default function NewPurchasePage() {
           </CardHeader>
           <CardContent>
             {/* Product Search */}
-            <div className="mb-4">
+            {/* <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Search Products</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -242,7 +243,7 @@ export default function NewPurchasePage() {
                   className="pl-10"
                 />
               </div>
-            </div>
+            </div> */}
 
             {/* Items List */}
             <div className="space-y-4">
@@ -276,7 +277,7 @@ export default function NewPurchasePage() {
                         <option value="">Select a product</option>
                         {filteredProducts?.map(product => (
                           <option key={product.id} value={product.id}>
-                            {product.product_name} - ${product.price}
+                            {product.product_name} - ${formatNumber(product.price)}
                           </option>
                         ))}
                       </select>
@@ -286,7 +287,7 @@ export default function NewPurchasePage() {
                     <div>
                       <label className="block text-sm font-medium mb-1">Price</label>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        {/* <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" /> */}
                         <Input
                           type="number"
                           value={item.price}
@@ -316,7 +317,7 @@ export default function NewPurchasePage() {
                   <div className="mt-3 flex justify-between items-center">
                     <span className="text-sm text-gray-600">Total for this item:</span>
                     <Badge variant="secondary" className="text-lg font-bold">
-                      ${item.total.toFixed(2)}
+                      ${formatNumber(item.total)}
                     </Badge>
                   </div>
                 </div>
@@ -349,13 +350,13 @@ export default function NewPurchasePage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">${formatNumber(subtotal)}</span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold">Total Amount:</span>
                   <span className="text-2xl font-bold text-green-600">
-                    ${totalAmount.toFixed(2)}
+                    ${formatNumber(totalAmount)}
                   </span>
                 </div>
               </div>
@@ -368,7 +369,7 @@ export default function NewPurchasePage() {
           <Button
             type="submit"
             disabled={saving}
-            className="flex-1"
+            className="flex-1 py-3 sm:py-2"
             size="lg"
           >
             {saving ? "Creating Purchase..." : "Create Purchase"}
@@ -377,7 +378,7 @@ export default function NewPurchasePage() {
             type="button"
             variant="outline"
             onClick={() => router.push("/purchase")}
-            className="flex-1"
+            className="flex-1 py-3 sm:py-2"
             size="lg"
           >
             Cancel
