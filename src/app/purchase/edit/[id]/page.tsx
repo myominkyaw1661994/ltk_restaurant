@@ -182,7 +182,7 @@ export default function EditPurchasePage() {
                   </TableCell>
                   <TableCell>{item.total}</TableCell>
                   <TableCell>
-                    <Button type="button" variant="destructive" onClick={() => handleRemoveItem(idx)} disabled={items.length === 1}>Remove</Button>
+                    <Button type="button" variant="destructive" onClick={() => handleRemoveItem(idx)} disabled={items.length === 1}>x</Button>
                   </TableCell>
                 </TableRow>
               ))}

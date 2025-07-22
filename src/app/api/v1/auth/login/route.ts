@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('name', '==', username));
     const querySnapshot = await getDocs(q);
+    console.log(querySnapshot);
 
     if (querySnapshot.empty) {
       return NextResponse.json(

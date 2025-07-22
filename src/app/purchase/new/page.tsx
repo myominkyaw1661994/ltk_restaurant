@@ -143,57 +143,72 @@ export default function NewPurchasePage() {
         </div>
         <div>
           <label className="block font-medium mb-2">Items</label>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>
-                    <select
-                      className="border rounded px-2 py-1"
-                      value={item.product_id}
-                      onChange={e => handleProductChange(idx, e.target.value)}
-                    >
-                      {products.map(p => (
-                        <option key={p.id} value={p.id}>{p.product_name}</option>
-                      ))}
-                    </select>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={item.price}
-                      min={0}
-                      onChange={e => handleItemChange(idx, "price", Number(e.target.value))}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      min={1}
-                      onChange={e => handleItemChange(idx, "quantity", Number(e.target.value))}
-                    />
-                  </TableCell>
-                  <TableCell>{item.total}</TableCell>
-                  <TableCell>
-                    <Button type="button" variant="destructive" onClick={() => handleRemoveItem(idx)} disabled={items.length === 1}>Remove</Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[140px] sm:min-w-[150px]">Product</TableHead>
+                  <TableHead className="min-w-[100px] sm:min-w-[100px]">Price</TableHead>
+                  <TableHead className="min-w-[90px] sm:min-w-[80px]">Quantity</TableHead>
+                  <TableHead className="min-w-[100px] sm:min-w-[120px]">Total</TableHead>
+                  <TableHead className="min-w-[80px] sm:min-w-[100px]">Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((item, idx) => (
+                  <TableRow key={idx} className="">
+                    <TableCell className="py-2">
+                      <select
+                        className="w-full border rounded px-3 py-2 text-sm sm:text-base"
+                        value={item.product_id}
+                        onChange={e => handleProductChange(idx, e.target.value)}
+                      >
+                        {products.map(p => (
+                          <option key={p.id} value={p.id}>{p.product_name}</option>
+                        ))}
+                      </select>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Input
+                        type="number"
+                        value={item.price}
+                        min={0}
+                        className="w-full text-sm sm:text-base px-3 py-2"
+                        onChange={e => handleItemChange(idx, "price", Number(e.target.value))}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Input
+                        type="number"
+                        value={item.quantity}
+                        min={1}
+                        className="w-full text-sm sm:text-base px-3 py-2"
+                        onChange={e => handleItemChange(idx, "quantity", Number(e.target.value))}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2 text-sm sm:text-base font-medium text-right">
+                      {item.total.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="sm"
+                        className="w-full sm:w-auto text-xs sm:text-sm px-3 py-2"
+                        onClick={() => handleRemoveItem(idx)} 
+                        disabled={items.length === 1}
+                      >
+                        Remove
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <Button type="button" className="mt-2" onClick={handleAddItem}>Add Item</Button>
         </div>
-        <div className="font-bold text-lg">Total Amount: {totalAmount}</div>
+        <div className="font-bold text-lg">Total Amount: {totalAmount.toLocaleString()}</div>
         <div className="flex gap-2">
           <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Create Purchase"}</Button>
           <Button type="button" variant="secondary" onClick={() => router.push("/purchase")}>Cancel</Button>
