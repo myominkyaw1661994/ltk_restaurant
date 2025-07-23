@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -30,8 +30,14 @@ interface Product {
 
 type SaleStatus = 'pending' | 'completed' | 'cancelled'
 
+type Table = {
+  id: number
+  name: string
+}
+
 export default function POSPage() {
   const router = useRouter()
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,6 +51,7 @@ export default function POSPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [saleDetails, setSaleDetails] = useState<any>(null)
+  const [tables, setTables] = useState<Table[]>([])
 
   // Category options
   const categories = [
@@ -75,12 +82,48 @@ export default function POSPage() {
         setLoading(false)
       }
     }
+
+    const fetchTables = async () => {
+      const tablesRes = await fetch(`/api/v1/table`)
+      const data = await tablesRes.json();
+      setTables(data.tables);
+    }
+
     fetchProducts()
+    fetchTables()
   }, [])
 
   useEffect(() => {
     requestNotificationPermission().catch(console.error)
   }, [])
+
+  // On mount, if table param is present, fetch latest sale for that table
+  useEffect(() => {
+    const tableParam = searchParams.get("table");
+    if (tableParam) {
+      console.log("tableParam", tableParam)
+      setTableNumber(tableParam);
+      // Fetch latest sale for this table
+      const fetchLatestSale = async () => {
+        try {
+          // const res = await fetch(`/api/v1/sale?table_number=${tableParam}&status=pending&limit=1&sort=desc`);
+          const res = await fetch(`/api/v1/sale/pending_sale?table_number=${tableParam}`);
+          const data = await res.json();
+          console.log("data", data)
+          if (data.sales && data.sales.length > 0) {
+            const sale = data.sales[0];
+            setCartItems(sale.items || []);
+            setCustomerName(sale.customer_name || "");
+            setNotes(sale.notes || "");
+            setStatus(sale.status || "pending");
+          }
+        } catch (err) {
+          // Optionally handle error
+        }
+      };
+      fetchLatestSale();
+    }
+  }, [searchParams]);
 
   const filteredProducts = products.filter(product => {
     const nameMatch = product.product_name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -291,12 +334,13 @@ export default function POSPage() {
                         <SelectValue placeholder="Select table" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">Table 1</SelectItem>
-                        <SelectItem value="2">Table 2</SelectItem>
-                        <SelectItem value="3">Table 3</SelectItem>
-                        <SelectItem value="4">Table 4</SelectItem>
-                        <SelectItem value="5">Table 5</SelectItem>
+                      {tables.map((table) => (
+                        <SelectItem key={table.id} value={table.name}>
+                          {table.name}
+                        </SelectItem>
+                      ))}
                       </SelectContent>
+                     
                     </Select>
                   </div>
                 </div>
