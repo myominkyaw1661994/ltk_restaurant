@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { requestNotificationPermission } from '@/lib/notification'
+
 import { Printer } from "lucide-react"
 
 interface SaleItem {
@@ -52,6 +53,8 @@ export default function POSPage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [saleDetails, setSaleDetails] = useState<any>(null)
   const [tables, setTables] = useState<Table[]>([])
+
+
 
   // Category options
   const categories = [

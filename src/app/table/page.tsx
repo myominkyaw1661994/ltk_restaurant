@@ -18,6 +18,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 
 // const ModalContent = dynamic(() => import('@/app/pos/page'), { ssr: false });
@@ -77,6 +78,8 @@ export default function TableViewPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [saleProducts, setSaleProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+
+
 
   // Fetch products (simulate API call)
   useEffect(() => {
@@ -275,6 +278,8 @@ export default function TableViewPage() {
                   <Button variant="secondary" onClick={() => window.location.href = `/pos?table=${selectedTable.name}`}>Go to POS</Button>
                   <Button onClick={handleSaveChanges}>Save Changes</Button>
                 </div>
+                
+
               </div>
             )}
           </div>

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { Purchase, PurchaseItem } from '@/lib/models';
+
+// Extend the Purchase interface to include the items association
+interface PurchaseWithItems extends Purchase {
+  items?: PurchaseItem[];
+}
 
 export async function GET(
   request: NextRequest,
@@ -8,56 +12,49 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const purchaseRef = doc(db, 'purchases', id);
-    const purchaseSnap = await getDoc(purchaseRef);
+    const purchase = await Purchase.findByPk(id, {
+      include: [
+        {
+          model: PurchaseItem,
+          as: 'items',
+          attributes: ['id', 'product_id', 'product_name', 'price', 'quantity', 'total']
+        }
+      ]
+    }) as PurchaseWithItems;
 
-    if (!purchaseSnap.exists()) {
+    if (!purchase) {
       return NextResponse.json(
-        { error: 'Purchase not found' },
+        { success: false, error: 'Purchase not found' },
         { status: 404 }
       );
     }
 
+    const formattedPurchase = {
+      id: purchase.id,
+      total_amount: purchase.total_amount,
+      status: purchase.status,
+      supplier_name: purchase.supplier_name,
+      notes: purchase.notes,
+      created_at: purchase.created_at,
+      updated_at: purchase.updated_at,
+      items: purchase.items?.map((item: PurchaseItem) => ({
+        id: item.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total
+      })) || []
+    };
+
     return NextResponse.json({
-      purchase: {
-        id: purchaseSnap.id,
-        ...purchaseSnap.data()
-      }
+      success: true,
+      purchase: formattedPurchase
     });
   } catch (error) {
     console.error('Error fetching purchase:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const purchaseRef = doc(db, 'purchases', id);
-    const purchaseSnap = await getDoc(purchaseRef);
-
-    if (!purchaseSnap.exists()) {
-      return NextResponse.json(
-        { error: 'Purchase not found' },
-        { status: 404 }
-      );
-    }
-
-    await deleteDoc(purchaseRef);
-
-    return NextResponse.json({
-      message: 'Purchase deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting purchase:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Failed to fetch purchase' },
       { status: 500 }
     );
   }
@@ -69,89 +66,91 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const purchaseRef = doc(db, 'purchases', id);
-    const purchaseSnap = await getDoc(purchaseRef);
-
-    if (!purchaseSnap.exists()) {
+    const purchase = await Purchase.findByPk(id);
+    
+    if (!purchase) {
       return NextResponse.json(
-        { error: 'Purchase not found' },
+        { success: false, error: 'Purchase not found' },
         { status: 404 }
       );
     }
 
     const body = await request.json();
-    const { name, description, items } = body;
+    const { supplier_name, status, notes } = body;
 
-    // Validate the request body
-    if (!name || typeof name !== 'string') {
+    // Validate status
+    if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
       return NextResponse.json(
-        { error: 'Purchase name is required and must be a string' },
+        { success: false, error: 'Status is required and must be pending, completed, or cancelled' },
         { status: 400 }
       );
     }
 
-    if (!description || typeof description !== 'string') {
-      return NextResponse.json(
-        { error: 'Description is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json(
-        { error: 'Purchase items are required and must be a non-empty array' },
-        { status: 400 }
-      );
-    }
-
-    // Validate each item
-    for (const item of items) {
-      if (!item.product_id || !item.product_name || !item.price || !item.quantity) {
-        return NextResponse.json(
-          { error: 'Each item must have product_id, product_name, price, and quantity' },
-          { status: 400 }
-        );
-      }
-
-      if (typeof item.price !== 'number' || typeof item.quantity !== 'number') {
-        return NextResponse.json(
-          { error: 'Price and quantity must be numbers' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Calculate total amount
-    const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    // Prepare updated purchase object
-    const updatedPurchase = {
-      name,
-      description,
-      total_amount,
-      items: items.map(item => ({
-        ...item,
-        total: item.price * item.quantity
-      })),
-      // Do not update created_at
-    };
-
-    await updateDoc(purchaseRef, updatedPurchase);
-
-    // Fetch the updated document
-    const updatedSnap = await getDoc(purchaseRef);
+    // Update purchase
+    await purchase.update({
+      supplier_name: supplier_name || null,
+      status,
+      notes: notes || null
+    });
 
     return NextResponse.json({
+      success: true,
       message: 'Purchase updated successfully',
       purchase: {
-        id: updatedSnap.id,
-        ...updatedSnap.data()
+        id: purchase.id,
+        total_amount: purchase.total_amount,
+        status: purchase.status,
+        supplier_name: purchase.supplier_name,
+        notes: purchase.notes,
+        created_at: purchase.created_at,
+        updated_at: purchase.updated_at
       }
     });
   } catch (error) {
     console.error('Error updating purchase:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Failed to update purchase' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const purchase = await Purchase.findByPk(id);
+    
+    if (!purchase) {
+      return NextResponse.json(
+        { success: false, error: 'Purchase not found' },
+        { status: 404 }
+      );
+    }
+
+    if (purchase.status !== 'completed') {
+      return NextResponse.json(
+        { success: false, error: 'Only completed purchases can be deleted' },
+        { status: 400 }
+      );
+    }
+
+    // Delete purchase items first (due to foreign key constraint)
+    await PurchaseItem.destroy({ where: { purchase_id: id } });
+    
+    // Delete the purchase
+    await purchase.destroy();
+
+    return NextResponse.json(
+      { success: true, message: 'Purchase deleted successfully' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error deleting purchase:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete purchase' },
       { status: 500 }
     );
   }

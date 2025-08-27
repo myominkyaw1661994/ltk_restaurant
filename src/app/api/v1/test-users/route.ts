@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { User } from '@/lib/models';
 
 // GET /api/v1/test-users - Test endpoint to see user data structure
 export async function GET(request: NextRequest) {
   try {
-    const usersRef = collection(db, 'users');
-    const snapshot = await getDocs(usersRef);
+    const users = await User.findAll({
+      attributes: ['id', 'username', 'email', 'role', 'created_at', 'updated_at']
+    });
     
-    const users = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
+    const formattedUsers = users.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      created_at: user.created_at,
+      updated_at: user.updated_at
     }));
 
     return NextResponse.json({
       success: true,
-      data: users,
+      data: formattedUsers,
       message: 'Raw user data for debugging',
-      count: users.length
+      count: formattedUsers.length
     });
   } catch (error) {
     console.error('Error in test-users:', error);

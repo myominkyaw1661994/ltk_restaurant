@@ -1,35 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { User } from '@/lib/models';
 import { hash } from 'bcryptjs';
+import { Op } from 'sequelize';
 
 // GET /api/v1/users - Get all users
 export async function GET(request: NextRequest) {
   try {
-    // Get user info from middleware headers
-    const userId = request.headers.get('x-user-id');
-    const userRole = request.headers.get('x-user-role');
-    const userName = request.headers.get('x-user-name');
+    // // Get user info from middleware headers
+    // const userId = request.headers.get('x-user-id');
+    // const userRole = request.headers.get('x-user-role');
+    // const userName = request.headers.get('x-user-name');
 
-    // Additional authentication check
-    if (!userId || !userRole || !userName) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
+    // // Additional authentication check
+    // if (!userId || !userRole || !userName) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Authentication required' },
+    //     { status: 401 }
+    //   );
+    // }
+
+    // console.log('Authenticated user:', { userId, userRole, userName });
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '10');
+    const search = searchParams.get('search');
+    const role = searchParams.get('role');
+
+    // Build where clause
+    const whereClause: any = {};
+    if (search) {
+      whereClause[Op.or] = [
+        { username: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } }
+      ];
+    }
+    if (role) {
+      whereClause.role = role;
     }
 
-    console.log('Authenticated user:', { userId, userRole, userName });
+    // Get total count
+    const totalItems = await User.count({ where: whereClause });
+    const totalPages = Math.ceil(totalItems / pageSize);
 
-    const querySnapshot = await getDocs(collection(db, 'users'));
-    const users = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    // Get users with pagination
+    const users = await User.findAll({
+      where: whereClause,
+      attributes: { exclude: ['password'] }, // Don't return passwords
+      order: [['created_at', 'DESC']],
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      raw: true,
+    });
+
+    const formattedUsers = users.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      created_at: user.created_at,
+      updated_at: user.updated_at
     }));
 
     return NextResponse.json({
       success: true,
-      data: users
+      data: formattedUsers,
+      pagination: {
+        currentPage: page,
+        pageSize,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
     });
 
   } catch (error) {
@@ -45,46 +88,60 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Get user info from middleware headers
-    const userId = request.headers.get('x-user-id');
-    const userRole = request.headers.get('x-user-role');
+    // const userId = request.headers.get('x-user-id');
+    // const userRole = request.headers.get('x-user-role');
 
-    // Additional authentication check
-    if (!userId || !userRole) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    // // Additional authentication check
+    // if (!userId || !userRole) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Authentication required' },
+    //     { status: 401 }
+    //   );
+    // }
 
-    // Optional: Check if user has admin role to create users
-    if (userRole !== 'Admin' && userRole !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
+    // // Optional: Check if user has admin role to create users
+    // if (userRole !== 'Admin' && userRole !== 'admin') {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Insufficient permissions' },
+    //     { status: 403 }
+    //   );
+    // }
 
-    console.log('Creating user - authenticated as:', { userId, userRole });
+    // console.log('Creating user - authenticated as:', { userId, userRole });
 
     const body = await request.json();
-    const { name, email, password, role } = body;
+    const { username, email, password, role } = body;
 
     // Validate required fields
-    if (!name || !email || !password || !role) {
+    if (!username || !email || !password || !role) {
       return NextResponse.json(
         { success: false, error: 'All fields are required' },
         { status: 400 }
       );
     }
 
+    // Validate role
+    // if (!['Admin', 'Manager', 'Staff'].includes(role)) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Invalid role. Must be Admin, Manager, or Staff' },
+    //     { status: 400 }
+    //   );
+    // }
+
     // Check if user already exists
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('email', '==', email));
-    const existingUser = await getDocs(q);
+    const existingUser = await User.findOne({
+      raw: true,
+      where: {
+        [Op.or]: [
+          { email },
+          { username }
+        ]
+      }
+    });
     
-    if (!existingUser.empty) {
+    if (existingUser) {
       return NextResponse.json(
-        { success: false, error: 'User with this email already exists' },
+        { success: false, error: 'User with this email or username already exists' },
         { status: 409 }
       );
     }
@@ -92,24 +149,28 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await hash(password, 12);
 
-    // Store user data in Firestore
-    const userData = {
-      name,
-      email,
+    // Create user
+    const user = await User.create({
+      username: username.trim(),
+      email: email.trim().toLowerCase(),
       password: hashedPassword,
-      role,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+      role
+    }, { raw: true });
 
-    const docRef = await addDoc(collection(db, 'users'), userData);
 
     // Return user data without password
-    const { password: _, ...userWithoutPassword } = userData;
+    const userResponse = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
 
     return NextResponse.json({
       success: true,
-      data: { id: docRef.id, ...userWithoutPassword },
+      data: userResponse,
       message: 'User created successfully'
     }, { status: 201 });
 

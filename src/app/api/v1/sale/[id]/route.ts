@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { Sale, SaleItem } from '@/lib/models';
+
+// Extend the Sale interface to include the items association
+interface SaleWithItems extends Sale {
+  items?: SaleItem[];
+}
 
 export async function DELETE(
   request: NextRequest,
@@ -8,36 +12,36 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const saleRef = doc(db, 'sales', id);
+    const sale = await Sale.findByPk(id);
     
-    // Check if sale exists and is completed
-    const saleDoc = await getDoc(saleRef);
-    if (!saleDoc.exists()) {
+    if (!sale) {
       return NextResponse.json(
-        { error: 'Sale not found' },
+        { success: false, error: 'Sale not found' },
         { status: 404 }
       );
     }
 
-    const saleData = saleDoc.data();
-    if (saleData.status !== 'completed') {
+    if (sale.status !== 'completed') {
       return NextResponse.json(
-        { error: 'Only completed sales can be deleted' },
+        { success: false, error: 'Only completed sales can be deleted' },
         { status: 400 }
       );
     }
 
+    // Delete sale items first (due to foreign key constraint)
+    await SaleItem.destroy({ where: { sale_id: id } });
+    
     // Delete the sale
-    await deleteDoc(saleRef);
+    await sale.destroy();
 
     return NextResponse.json(
-      { message: 'Sale deleted successfully' },
+      { success: true, message: 'Sale deleted successfully' },
       { status: 200 }
     );
   } catch (error) {
     console.error('Error deleting sale:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Failed to delete sale' },
       { status: 500 }
     );
   }
@@ -49,24 +53,50 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const saleRef = doc(db, 'sales', id);
-    const saleDoc = await getDoc(saleRef);
-    if (!saleDoc.exists()) {
+    const sale = await Sale.findByPk(id, {
+      include: [
+        {
+          model: SaleItem,
+          as: 'items',
+          attributes: ['id', 'product_id', 'product_name', 'price', 'quantity', 'total']
+        }
+      ]
+    }) as SaleWithItems;
+
+    if (!sale) {
       return NextResponse.json(
-        { error: 'Sale not found' },
+        { success: false, error: 'Sale not found' },
         { status: 404 }
       );
     }
+
+    const formattedSale = {
+      id: sale.id,
+      total_amount: sale.total_amount,
+      status: sale.status,
+      customer_name: sale.customer_name,
+      table_number: sale.table_number,
+      notes: sale.notes,
+      created_at: sale.created_at,
+      updated_at: sale.updated_at,
+      items: sale.items?.map((item: SaleItem) => ({
+        id: item.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total
+      })) || []
+    };
+
     return NextResponse.json({
-      sale: {
-        id: saleDoc.id,
-        ...saleDoc.data()
-      }
+      success: true,
+      sale: formattedSale
     });
   } catch (error) {
     console.error('Error fetching sale:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Failed to fetch sale' },
       { status: 500 }
     );
   }
@@ -78,81 +108,52 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const saleRef = doc(db, 'sales', id);
-    const saleDoc = await getDoc(saleRef);
-    if (!saleDoc.exists()) {
+    const sale = await Sale.findByPk(id);
+    
+    if (!sale) {
       return NextResponse.json(
-        { error: 'Sale not found' },
+        { success: false, error: 'Sale not found' },
         { status: 404 }
       );
     }
 
     const body = await request.json();
-    const { customer_name, table_number, status, notes, items } = body;
+    const { customer_name, table_number, status, notes } = body;
 
-    // Validate required fields
-    if (!Array.isArray(items) || items.length === 0) {
+    // Validate status
+    if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
       return NextResponse.json(
-        { error: 'Sale items are required and must be a non-empty array' },
-        { status: 400 }
-      );
-    }
-    if (!status || typeof status !== 'string') {
-      return NextResponse.json(
-        { error: 'Status is required and must be a string' },
+        { success: false, error: 'Status is required and must be pending, completed, or cancelled' },
         { status: 400 }
       );
     }
 
-    // Validate each item
-    for (const item of items) {
-      if (!item.product_id || !item.product_name || !item.price || !item.quantity) {
-        return NextResponse.json(
-          { error: 'Each item must have product_id, product_name, price, and quantity' },
-          { status: 400 }
-        );
-      }
-      if (typeof item.price !== 'number' || typeof item.quantity !== 'number') {
-        return NextResponse.json(
-          { error: 'Price and quantity must be numbers' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Calculate total amount
-    const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    // Prepare updated sale object
-    const updatedSale = {
-      customer_name: customer_name || '',
-      table_number: table_number || '',
+    // Update sale
+    await sale.update({
+      customer_name: customer_name || null,
+      table_number: table_number || null,
       status,
-      notes: notes || '',
-      items: items.map(item => ({
-        ...item,
-        total: item.price * item.quantity
-      })),
-      total_amount,
-      updated_at: new Date().toISOString()
-    };
-
-    await updateDoc(saleRef, updatedSale);
-
-    // Fetch the updated document
-    const updatedSnap = await getDoc(saleRef);
+      notes: notes || null
+    });
 
     return NextResponse.json({
+      success: true,
       message: 'Sale updated successfully',
       sale: {
-        id: updatedSnap.id,
-        ...updatedSnap.data()
+        id: sale.id,
+        total_amount: sale.total_amount,
+        status: sale.status,
+        customer_name: sale.customer_name,
+        table_number: sale.table_number,
+        notes: sale.notes,
+        created_at: sale.created_at,
+        updated_at: sale.updated_at
       }
     });
   } catch (error) {
     console.error('Error updating sale:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Failed to update sale' },
       { status: 500 }
     );
   }

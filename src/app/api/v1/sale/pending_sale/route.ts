@@ -1,25 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, startAfter, getCountFromServer, DocumentSnapshot, where } from 'firebase/firestore';
-import { sendNotification } from '@/lib/notification';
-
-interface SaleItem {
-  product_id: string;
-  product_name: string;
-  price: number;
-  quantity: number;
-  total: number;
-}
-
-interface Sale {
-  items: SaleItem[];
-  total_amount: number;
-  created_at: string;
-  status: 'pending' | 'completed' | 'cancelled';
-  customer_name?: string;
-  table_number?: string;
-  notes?: string;
-}
+import { Sale, SaleItem } from '@/lib/models';
+import { Op } from 'sequelize';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,38 +15,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build query to get the latest sale for the specified table and status
-    const salesRef = collection(db, 'sales');
-    const q = query(
-      salesRef,
-      where('table_number', '==', tableNumber),
-      where('status', '==', 'pending'),
-      orderBy('created_at', 'desc'),
-      limit(1)
-    );
+    // Get the latest sale for the specified table with pending status
+    const latestSale = await Sale.findOne({
+      where: {
+        table_number: tableNumber,
+        status: 'pending'
+      },
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: SaleItem,
+          as: 'items',
+          attributes: ['id', 'product_id', 'product_name', 'price', 'quantity', 'total']
+        }
+      ]
+    });
 
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
+    if (!latestSale) {
       return NextResponse.json({
         success: true,
-        message: 'No sale found for the specified table and status',
+        message: 'No pending sale found for the specified table',
         sale: null
       });
     }
-    console.log("snapshot", snapshot)   
 
-    // Get the latest sale (first document due to desc ordering)
-    const latestSaleDoc = snapshot.docs[0];
-    const saleData = latestSaleDoc.data();
+    // Format the response
     const sale = {
-      id: latestSaleDoc.id,
-      ...saleData
+      id: latestSale.id,
+      total_amount: latestSale.total_amount,
+      status: latestSale.status,
+      customer_name: latestSale.customer_name,
+      table_number: latestSale.table_number,
+      notes: latestSale.notes,
+      created_at: latestSale.created_at,
+      updated_at: latestSale.updated_at,
+      items: latestSale.items?.map((item: SaleItem) => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total
+      })) || []
     };
 
     return NextResponse.json({
       success: true,
-      message: 'Latest sale retrieved successfully',
+      message: 'Latest pending sale retrieved successfully',
       sale
     });
 

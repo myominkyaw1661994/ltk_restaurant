@@ -4,8 +4,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getCurrentUser } from '@/lib/auth'
 import { Plus, ChevronLeft, ChevronRight, Eye, Pencil, Trash2, Check } from "lucide-react"
-import { collection, getDocs, query, orderBy, limit, startAfter, getCountFromServer } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,21 +33,29 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 
+interface SaleItem {
+  id: string
+  product_id: string
+  product_name: string
+  price: number
+  quantity: number
+  total: number
+}
+
 interface Sale {
   id: string
-  items: {
-    product_id: string
-    product_name: string
-    price: number
-    quantity: number
-    total: number
-  }[]
+  items: SaleItem[]
   total_amount: number
   created_at: string
   status: 'pending' | 'completed' | 'cancelled'
   customer_name?: string
   table_number?: string
   notes?: string
+  user?: {
+    id: string
+    username: string
+    email: string
+  }
 }
 
 export default function SalePage() {
@@ -66,7 +72,6 @@ export default function SalePage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [totalItems, setTotalItems] = useState(0)
-  const [lastDoc, setLastDoc] = useState<any>(null)
   const [hasNextPage, setHasNextPage] = useState(false)
   const [hasPreviousPage, setHasPreviousPage] = useState(false)
 
@@ -89,39 +94,34 @@ export default function SalePage() {
       setLoading(true)
       setError(null)
       
-      // Create a query to get all sales, ordered by creation date
-      const salesRef = collection(db, 'sales')
-      let q = query(salesRef, orderBy('created_at', 'desc'), limit(size))
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: size.toString()
+      });
       
-      // If not on first page, start after the last document
-      if (page > 1 && lastDoc) {
-        q = query(salesRef, orderBy('created_at', 'desc'), startAfter(lastDoc), limit(size))
+      if (filterStatus !== 'all') {
+        params.append('status', filterStatus);
       }
       
-      // Get total count
-      const totalCountSnapshot = await getCountFromServer(salesRef)
-      const total = totalCountSnapshot.data().count
-      setTotalItems(total)
+      if (filterCustomer) {
+        params.append('customer_name', filterCustomer);
+      }
       
-      // Get the documents
-      const querySnapshot = await getDocs(q)
+      const response = await fetch(`/api/v1/sale?${params.toString()}`);
+      const data = await response.json();
       
-      // Transform the documents into the Sale type
-      const salesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Sale[]
-
-      // Update pagination state
-      setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1])
-      setHasNextPage(querySnapshot.docs.length === size)
-      setHasPreviousPage(page > 1)
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch sales');
+      }
       
-      setSales(salesData)
+      setSales(data.sales);
+      setTotalItems(data.pagination.totalItems);
+      setHasNextPage(data.pagination.hasNextPage);
+      setHasPreviousPage(data.pagination.hasPreviousPage);
+      
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
-      setError(errorMessage)
-      toast.error("Failed to fetch sales")
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -140,7 +140,6 @@ export default function SalePage() {
     const size = parseInt(newSize)
     setPageSize(size)
     setCurrentPage(1) // Reset to first page when changing page size
-    setLastDoc(null) // Reset last document
   }
 
   const handleNextPage = () => {

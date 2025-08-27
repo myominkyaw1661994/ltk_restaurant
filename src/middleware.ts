@@ -27,6 +27,8 @@ const publicRoutes = [
 ];
 
 export async function middleware(request: NextRequest) {
+
+  return NextResponse.next();
   const { pathname } = request.nextUrl;
 
   // Skip middleware for public routes

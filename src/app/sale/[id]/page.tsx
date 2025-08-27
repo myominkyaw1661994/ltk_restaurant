@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 
 import {
@@ -30,6 +28,7 @@ import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 
 interface SaleItem {
+  id: string
   product_id: string
   product_name: string
   price: number
@@ -46,6 +45,11 @@ interface Sale {
   customer_name?: string
   table_number?: string
   notes?: string
+  user?: {
+    id: string
+    username: string
+    email: string
+  }
 }
 
 interface DetailPageProps {
@@ -87,20 +91,16 @@ const DetailPage = ({ params }: DetailPageProps) => {
         setLoading(true)
         setError(null)
 
-        const saleRef = doc(db, 'sales', saleId)
-        const saleDoc = await getDoc(saleRef)
+        const response = await fetch(`/api/v1/sale/${saleId}`);
+        const data = await response.json();
 
-        if (!saleDoc.exists()) {
-          throw new Error('Sale not found')
+        if (!response.ok) {
+          throw new Error(data.error || 'Sale not found');
         }
 
-        setSale({
-          id: saleDoc.id,
-          ...saleDoc.data()
-        } as Sale)
+        setSale(data.sale);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An error occurred'
-        setError(errorMessage)
+        setError(err instanceof Error ? err.message : 'An error occurred')
         toast.error("Failed to fetch sale details")
       } finally {
         setLoading(false)

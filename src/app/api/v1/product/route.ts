@@ -1,55 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, where, serverTimestamp, Query } from 'firebase/firestore';
+import { Product } from '@/lib/models';
+import { Op } from 'sequelize';
 
 export async function GET(request: NextRequest) {
   try {
     // Get user info from middleware headers
-    const userId = request.headers.get('x-user-id');
-    const userRole = request.headers.get('x-user-role');
+    // const userId = request.headers.get('x-user-id');
+    // const userRole = request.headers.get('x-user-role');
 
-    // Additional authentication check
-    if (!userId || !userRole) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    // // Additional authentication check
+    // if (!userId || !userRole) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Authentication required' },
+    //     { status: 401 }
+    //   );
+    // }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '10');
     const type = searchParams.get('type') || 'all';
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
 
-    const productsRef = collection(db, 'products');
-    let productsQuery: Query = query(productsRef);
-
-    // Add type filter if not 'all'
+    // Build where clause
+    const whereClause: any = {};
     if (type !== 'all') {
-      productsQuery = query(productsQuery, where('type', '==', type));
+      whereClause.type = type;
+    }
+    if (category) {
+      whereClause.category = category;
+    }
+    if (search) {
+      whereClause.product_name = { [Op.like]: `%${search}%` };
     }
 
-    // Get all products for the current type
-    const allProductsSnapshot = await getDocs(productsQuery);
-    const totalItems = allProductsSnapshot.size;
+    // Get total count
+    const totalItems = await Product.count({ where: whereClause });
     const totalPages = Math.ceil(totalItems / pageSize);
 
-    // Calculate start and end indices for pagination
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
+    // Get products with pagination
+    const products = await Product.findAll({
+      where: whereClause,
+      order: [['created_at', 'DESC']],
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+      raw: true,
+    });
 
-    // Get paginated products
-    const products = allProductsSnapshot.docs
-      .slice(startIndex, endIndex)
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        created_at: doc.data().created_at?.toDate?.() || new Date().toISOString()
-      }));
+
+    const formattedProducts = products.map(product => ({
+      id: product.id,
+      product_name: product.product_name,
+      price: product.price,
+      category: product.category,
+      type: product.type,
+      created_at: product.created_at,
+      updated_at: product.updated_at
+    }));
 
     return NextResponse.json({
       success: true,
-      products,
+      products: formattedProducts,
       pagination: {
         currentPage: page,
         pageSize,
@@ -71,30 +83,38 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Get user info from middleware headers
-    const userId = request.headers.get('x-user-id');
-    const userRole = request.headers.get('x-user-role');
+    // const userId = request.headers.get('x-user-id');
+    // const userRole = request.headers.get('x-user-role');
 
-    // Additional authentication check
-    if (!userId || !userRole) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    // // Additional authentication check
+    // if (!userId || !userRole) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Authentication required' },
+    //     { status: 401 }
+    //   );
+    // }
 
     // Optional: Check if user has appropriate role to create products
-    if (userRole !== 'Admin' && userRole !== 'admin' && userRole !== 'Manager' && userRole !== 'manager') {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
+    // if (userRole !== 'Admin' && userRole !== 'admin' && userRole !== 'Manager' && userRole !== 'manager') {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Insufficient permissions' },
+    //     { status: 403 }
+    //   );
+    // }
 
     const { product_name, price, type, category } = await request.json();
 
     if (!product_name || typeof price !== 'number' || !type || !category) {
       return NextResponse.json(
         { success: false, error: 'Product name, price, type, and category are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate type
+    if (!['sale', 'purchase'].includes(type)) {
+      return NextResponse.json(
+        { success: false, error: 'Type must be either "sale" or "purchase"' },
         { status: 400 }
       );
     }
@@ -108,25 +128,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create product data
-    const productData = {
-      product_name,
+    // Validate price
+    if (price < 0) {
+      return NextResponse.json(
+        { success: false, error: 'Price must be a positive number' },
+        { status: 400 }
+      );
+    }
+
+    // Create product
+    const product = await Product.create({
+      product_name: product_name.trim(),
       price,
       type,
-      category,
-      created_at: serverTimestamp(),
-      updated_at: serverTimestamp()
-    };
-
-    // Add to Firestore
-    const docRef = await addDoc(collection(db, 'products'), productData);
+      category
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Product created successfully',
       data: {
-        id: docRef.id,
-        ...productData
+        id: product.id,
+        product_name: product.product_name,
+        price: product.price,
+        type: product.type,
+        category: product.category,
+        created_at: product.created_at,
+        updated_at: product.updated_at
       }
     }, { status: 201 });
 

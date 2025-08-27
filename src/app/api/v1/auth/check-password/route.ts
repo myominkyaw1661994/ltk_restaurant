@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { User } from '@/lib/models';
 import { compare } from 'bcryptjs';
 import { jwtUtils, JWTPayload } from '@/lib/jwt';
 
@@ -18,28 +17,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user from Firestore
-    const userDoc = await getDoc(doc(db, 'users', userId));
+    // Get user from database
+    const user = await User.findByPk(userId);
     
-    if (!userDoc.exists()) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    const userData = userDoc.data();
-
     // Verify password
-    const isPasswordValid = await compare(password, userData.password);
+    const isPasswordValid = await compare(password, user.password);
     
     if (isPasswordValid) {
       // Generate JWT token
       const payload: JWTPayload = {
-        userId: userDoc.id,
-        name: userData.name,
-        role: userData.role,
-        email: userData.email
+        userId: user.id,
+        name: user.username,
+        role: user.role,
+        email: user.email
       };
 
       const token = await jwtUtils.generateToken(payload);
@@ -50,10 +47,10 @@ export async function POST(request: NextRequest) {
         data: {
           token,
           user: {
-            id: userDoc.id,
-            name: userData.name,
-            role: userData.role,
-            email: userData.email
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            email: user.email
           }
         }
       });

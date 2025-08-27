@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
+import { User } from '@/lib/models';
 import { hash } from 'bcryptjs';
 
 // POST /api/v1/setup - Create default admin user if not exists
@@ -10,18 +9,20 @@ export async function POST(request: NextRequest) {
 
     // Default admin user credentials
     const defaultAdmin = {
-      name: 'admin',
+      username: 'admin',
       email: 'admin@restaurant.com',
       password: 'admin123',
-      role: 'Admin'
+      role: 'Admin' as const
     };
 
     // Check if default admin user already exists
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('name', '==', defaultAdmin.name));
-    const querySnapshot = await getDocs(q);
+    const existingAdmin = await User.findOne({
+      where: {
+        email: defaultAdmin.email
+      }
+    });
 
-    if (!querySnapshot.empty) {
+    if (existingAdmin) {
       console.log('Default admin user already exists');
       return NextResponse.json({
         success: true,
@@ -34,24 +35,24 @@ export async function POST(request: NextRequest) {
     // Hash the password
     const hashedPassword = await hash(defaultAdmin.password, 12);
 
-    // Create user data
-    const userData = {
-      name: defaultAdmin.name,
+    // Create user
+    await User.create({
+      username: defaultAdmin.username,
       email: defaultAdmin.email,
       password: hashedPassword,
-      role: defaultAdmin.role,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    // Add user to Firestore
-    const docRef = await addDoc(collection(db, 'users'), userData);
+      role: defaultAdmin.role
+    });
 
     console.log('Default admin user created successfully');
 
     return NextResponse.json({
       success: true,
       message: 'Default admin user created successfully',
+      data: {
+        username: defaultAdmin.username,
+        email: defaultAdmin.email,
+        role: defaultAdmin.role
+      }
     }, { status: 201 });
 
   } catch (error) {
@@ -72,11 +73,14 @@ export async function GET(request: NextRequest) {
   try {
     console.log('Checking for default admin user');
 
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('name', '==', 'admin'));
-    const querySnapshot = await getDocs(q);
+    const existingAdmin = await User.findOne({
+      where: {
+        email: 'admin@restaurant.com'
+      },
+      attributes: ['id', 'username', 'email', 'role', 'created_at']
+    });
 
-    const exists = !querySnapshot.empty;
+    const exists = !!existingAdmin;
 
     return NextResponse.json({
       success: true,
@@ -84,9 +88,10 @@ export async function GET(request: NextRequest) {
         defaultAdminExists: exists,
         message: exists ? 'Default admin user exists' : 'Default admin user does not exist',
         credentials: exists ? {
-          username: 'admin',
-          email: 'admin@restaurant.com',
-          role: 'Admin'
+          username: existingAdmin.username,
+          email: existingAdmin.email,
+          role: existingAdmin.role,
+          created_at: existingAdmin.created_at
         } : null
       }
     });

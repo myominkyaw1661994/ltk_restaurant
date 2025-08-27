@@ -1,34 +1,17 @@
-import { getMessaging, getToken, onMessage, MessagePayload } from 'firebase/messaging';
-import { app } from './firebase';
-import { db } from './firebase';
-import { doc, setDoc } from 'firebase/firestore';
-
-// Handle incoming messages when app is in foreground
+// Simplified notification system without Firebase
 export const onMessageListener = () =>
   new Promise((resolve) => {
-    const messaging = getMessaging(app);
-    onMessage(messaging, (payload: MessagePayload) => {
-      resolve(payload);
-    });
+    // Simplified message listener - can be extended later
+    resolve(null);
   });
 
-// Request permission and get FCM token
+// Request permission and get notification token
 export async function requestNotificationPermission() {
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      const messaging = getMessaging(app);
-      const token = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
-      });
-
-      // Store token in Firestore
-      await setDoc(doc(db, 'fcm_tokens', token), {
-        token,
-        created_at: new Date().toISOString()
-      });
-
-      return token;
+      console.log('Notification permission granted');
+      return 'notification-token'; // Simplified token
     }
     return null;
   } catch (error) {

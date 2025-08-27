@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,32 +32,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all FCM tokens from Firestore
-    const tokensSnapshot = await getDocs(collection(db, 'fcm_tokens'));
-    const tokens = tokensSnapshot.docs.map(doc => doc.data().token);
-
-    if (tokens.length === 0) {
-      return NextResponse.json({ 
-        success: true,
-        message: 'No devices registered for notifications' 
-      });
-    }
-
     // For now, just log the notification since we don't have Firebase Admin SDK
     console.log('Notification would be sent:', {
         title,
         body,
-      recipientCount: tokens.length,
-      sentBy: userId
+        sentBy: userId
     });
 
     return NextResponse.json({
       success: true,
-      message: `Notification logged for ${tokens.length} devices`,
+      message: `Notification logged successfully`,
       data: {
         title,
         body,
-        recipientCount: tokens.length,
         sentBy: userId
       }
     });

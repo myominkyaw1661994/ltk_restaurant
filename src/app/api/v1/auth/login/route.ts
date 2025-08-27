@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { User } from '@/lib/models';
 import { compare } from 'bcryptjs';
 import { jwtUtils, JWTPayload } from '@/lib/jwt';
+import { Op } from 'sequelize';
 
 // POST /api/v1/auth/login - Login with username and password
 export async function POST(request: NextRequest) {
@@ -18,36 +18,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by username
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('name', '==', username));
-    const querySnapshot = await getDocs(q);
-    console.log(querySnapshot);
+    // Find user by username or email
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { username },
+          { email: username }
+        ]
+      },
+      raw: true
+    });
 
-    if (querySnapshot.empty) {
+
+
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    const userDoc = querySnapshot.docs[0];
-    const userData = userDoc.data();
-
     // Verify password
-    const isPasswordValid = await compare(password, userData.password);
+    const isPasswordValid = await compare(password, user.password);
     
     if (isPasswordValid) {
       // Generate JWT token
       const payload: JWTPayload = {
-        userId: userDoc.id,
-        name: userData.name,
-        role: userData.role,
-        email: userData.email
+        userId: user.id,
+        name: user.username,
+        role: user.role,
+        email: user.email
       };
 
       const token = await jwtUtils.generateToken(payload);
-      console.log(token);
 
       return NextResponse.json({
         success: true,
@@ -55,10 +58,10 @@ export async function POST(request: NextRequest) {
         data: {
           token,
           user: {
-            id: userDoc.id,
-            name: userData.name,
-            role: userData.role,
-            email: userData.email
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            email: user.email
           }
         }
       });

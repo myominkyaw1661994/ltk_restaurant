@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { Table } from '@/lib/models';
 
 // GET /api/v1/table - List all tables
 export async function GET() {
   try {
-    const tablesRef = collection(db, 'tables');
-    const q = query(tablesRef);
-    const snapshot = await getDocs(q);
-    const tables = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return NextResponse.json({ success: true, tables });
+    const tables = await Table.findAll({
+      order: [['created_at', 'ASC']],
+      raw: true,
+    });
+    
+    return NextResponse.json({ 
+      success: true, 
+      tables: tables.map(table => ({
+        id: table.id,
+        name: table.name,
+        status: table.status,
+        created_at: table.created_at,
+        updated_at: table.updated_at
+      }))
+    });
   } catch (error) {
+    console.error('Error fetching tables:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch tables' }, { status: 500 });
   }
 }
@@ -19,40 +29,34 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const { name, status } = await request.json();
+    
     if (!name || typeof name !== 'string') {
       return NextResponse.json({ success: false, error: 'Table name is required' }, { status: 400 });
     }
-    const tableStatus = typeof status === 'string' ? status : 'available';
-    const tablesRef = collection(db, 'tables');
+    
+    const tableStatus = (typeof status === 'string' && ['available', 'occupied', 'reserved'].includes(status)) 
+      ? status as 'available' | 'occupied' | 'reserved' 
+      : 'available';
+    
     // Check for uniqueness
-    const q = query(tablesRef, where('name', '==', name));
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
+    const existingTable = await Table.findOne({ where: { name } });
+    if (existingTable) {
       return NextResponse.json({ success: false, error: 'Table name must be unique' }, { status: 409 });
     }
-    const docRef = await addDoc(tablesRef, { name, status: tableStatus });
-    return NextResponse.json({ success: true, id: docRef.id, name, status: tableStatus });
+    
+    const table = await Table.create({ 
+      name: name.trim(), 
+      status: tableStatus 
+    });
+    
+    return NextResponse.json({ 
+      success: true, 
+      id: table.id, 
+      name: table.name, 
+      status: table.status 
+    });
   } catch (error) {
+    console.error('Error creating table:', error);
     return NextResponse.json({ success: false, error: 'Failed to create table' }, { status: 500 });
-  }
-}
-
-// DELETE /api/v1/table - Delete a table
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Table ID is required' }, { status: 400 });
-    }
-
-    const tableRef = doc(db, 'tables', id);
-    await deleteDoc(tableRef);
-    
-    return NextResponse.json({ success: true, message: 'Table deleted successfully' });
-  } catch (error) {
-    console.error('Delete table error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to delete table' }, { status: 500 });
   }
 }

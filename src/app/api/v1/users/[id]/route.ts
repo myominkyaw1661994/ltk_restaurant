@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { User } from '@/lib/models';
 import { hash } from 'bcryptjs';
 
 // GET /api/v1/users/[id] - Get specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Get user info from middleware headers
@@ -21,26 +20,27 @@ export async function GET(
       );
     }
 
-    const { id } = await params;
-    const userDoc = await getDoc(doc(db, 'users', id));
+    const { id } = params;
+    const user = await User.findByPk(id, {
+      attributes: { exclude: ['password'] } // Don't return password
+    });
 
-    if (!userDoc.exists()) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    const userData = userDoc.data();
     return NextResponse.json({
       success: true,
       data: {
-        id: userDoc.id,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        createdAt: userData.createdAt,
-        updatedAt: userData.updatedAt
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at,
+        updated_at: user.updated_at
       }
     });
 
@@ -56,7 +56,7 @@ export async function GET(
 // PUT /api/v1/users/[id] - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Get user info from middleware headers
@@ -79,23 +79,38 @@ export async function PUT(
       );
     }
 
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
-    const { name, email, password, role } = body;
+    const { username, email, password, role } = body;
 
     // Validate required fields
-    if (!name || !email || !role) {
+    if (!username || !email || !role) {
       return NextResponse.json(
-        { success: false, error: 'Name, email, and role are required' },
+        { success: false, error: 'Username, email, and role are required' },
         { status: 400 }
       );
     }
 
+    // Validate role
+    if (!['Admin', 'Manager', 'Staff'].includes(role)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid role. Must be Admin, Manager, or Staff' },
+        { status: 400 }
+      );
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     const updateData: any = {
-      name,
-      email,
-      role,
-      updatedAt: new Date().toISOString()
+      username: username.trim(),
+      email: email.trim().toLowerCase(),
+      role
     };
 
     // Only hash password if it's provided
@@ -103,11 +118,19 @@ export async function PUT(
       updateData.password = await hash(password, 12);
     }
 
-    await updateDoc(doc(db, 'users', id), updateData);
+    await user.update(updateData);
 
     return NextResponse.json({
       success: true,
-      message: 'User updated successfully'
+      message: 'User updated successfully',
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      }
     });
 
   } catch (error) {
@@ -122,7 +145,7 @@ export async function PUT(
 // DELETE /api/v1/users/[id] - Delete user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Get user info from middleware headers
@@ -145,7 +168,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = await params;
+    const { id } = params;
 
     // Prevent deleting own account
     if (id === userId) {
@@ -155,7 +178,15 @@ export async function DELETE(
       );
     }
 
-    await deleteDoc(doc(db, 'users', id));
+    const user = await User.findByPk(id);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    await user.destroy();
 
     return NextResponse.json({
       success: true,

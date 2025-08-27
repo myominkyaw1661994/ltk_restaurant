@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, getCountFromServer } from 'firebase/firestore';
+import { Purchase, PurchaseItem, User } from '@/lib/models';
+import { Op } from 'sequelize';
 
-interface PurchaseItem {
+interface PurchaseItemData {
   product_id: string;
   product_name: string;
   price: number;
@@ -10,14 +10,102 @@ interface PurchaseItem {
   total: number;
 }
 
-interface Purchase {
-  name: string;
-  description: string;
-  total_amount: number;
-  items: PurchaseItem[];
-  created_at: string;
+interface CreatePurchaseRequest {
+  items: PurchaseItemData[];
+  supplier_name?: string;
+  purchase_date?: string;
+  notes?: string;
 }
 
+// GET /api/v1/purchase - List all purchases with pagination
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '10');
+    const status = searchParams.get('status');
+    const supplier = searchParams.get('supplier');
+
+    // Build where clause
+    const whereClause: any = {};
+    if (status) {
+      whereClause.status = status;
+    }
+    if (supplier) {
+      whereClause.supplier_name = { [Op.like]: `%${supplier}%` };
+    }
+
+    // Get total count
+    const totalItems = await Purchase.count({ where: whereClause });
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    // Get purchases with pagination
+    const purchases = await Purchase.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: PurchaseItem,
+          as: 'items',
+          attributes: ['id', 'product_id', 'product_name', 'price', 'quantity', 'total']
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
+
+    const formattedPurchases = purchases.map(purchase => ({
+      id: purchase.id,
+      total_amount: purchase.total_amount,
+      status: purchase.status,
+      supplier_name: purchase.supplier_name,
+      purchase_date: purchase.purchase_date,
+      notes: purchase.notes,
+      created_at: purchase.created_at,
+      updated_at: purchase.updated_at,
+      user: purchase.user ? {
+        id: purchase.user.id,
+        username: purchase.user.username,
+        email: purchase.user.email
+      } : null,
+      items: purchase.items?.map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total
+      })) || []
+    }));
+
+    return NextResponse.json({
+      success: true,
+      message: 'Purchases retrieved successfully',
+      purchases: formattedPurchases,
+      pagination: {
+        currentPage: page,
+        pageSize,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching purchases:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch purchases' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/v1/purchase - Create a new purchase
 export async function POST(request: NextRequest) {
   try {
     // Get user info from middleware headers
@@ -32,32 +120,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optional: Check if user has appropriate role to create purchases
-    if (userRole !== 'Admin' && userRole !== 'admin' && userRole !== 'Manager' && userRole !== 'manager') {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const { name, description, items } = body;
+    const body: CreatePurchaseRequest = await request.json();
+    const { items, supplier_name, purchase_date, notes } = body;
 
     // Validate the request body
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Purchase name is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    if (!description || typeof description !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Description is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Purchase items are required and must be a non-empty array' },
@@ -85,29 +151,44 @@ export async function POST(request: NextRequest) {
     // Calculate total amount
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Create purchase object
-    const purchase: Purchase = {
-      name,
-      description,
-      total_amount,
-      items: items.map(item => ({
-        ...item,
-        total: item.price * item.quantity
-      })),
-      created_at: new Date().toISOString()
-    };
+    // Create purchase with transaction
+    const result = await Purchase.sequelize!.transaction(async (t) => {
+      // Create purchase
+      const purchase = await Purchase.create({
+        total_amount,
+        status: 'pending',
+        supplier_name,
+        purchase_date: purchase_date ? new Date(purchase_date) : new Date(),
+        notes,
+        user_id: userId
+      }, { transaction: t });
 
-    // Add to Firestore
-    const purchasesRef = collection(db, 'purchases');
-    const docRef = await addDoc(purchasesRef, purchase);
+      // Create purchase items
+      const purchaseItems = items.map(item => ({
+        purchase_id: purchase.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.price * item.quantity
+      }));
+
+      await PurchaseItem.bulkCreate(purchaseItems, { transaction: t });
+
+      return purchase;
+    });
 
     return NextResponse.json(
       { 
         success: true,
         message: 'Purchase created successfully',
         purchase: {
-          id: docRef.id,
-          ...purchase
+          id: result.id,
+          total_amount: result.total_amount,
+          status: result.status,
+          supplier_name: result.supplier_name,
+          purchase_date: result.purchase_date,
+          notes: result.notes
         }
       },
       { status: 201 }
@@ -116,71 +197,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating purchase:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    // Get user info from middleware headers
-    const userId = request.headers.get('x-user-id');
-    const userRole = request.headers.get('x-user-role');
-
-    // Additional authentication check
-    if (!userId || !userRole) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '10');
-
-    console.log('Fetching purchases with pagination:', { page, pageSize });
-
-    const purchasesRef = collection(db, 'purchases');
-    
-    // Build query
-    let q = query(purchasesRef, orderBy('created_at', 'desc'));
-
-    // Get total count
-    const totalCountSnapshot = await getCountFromServer(q);
-    const totalItems = totalCountSnapshot.data().count;
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    // Get all documents up to the current page
-    const allDocsSnapshot = await getDocs(q);
-    
-    // Get the documents for the current page
-    const skip = (page - 1) * pageSize;
-    const pageDocs = allDocsSnapshot.docs.slice(skip, skip + pageSize);
-
-    const purchases = pageDocs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    return NextResponse.json({
-      success: true,
-      message: 'Purchases retrieved successfully',
-      purchases,
-      pagination: {
-        currentPage: page,
-        pageSize,
-        totalItems,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1
-      }
-    }, { status: 200 });
-  } catch (error) {
-    console.error('Error fetching purchases:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { success: false, error: 'Failed to create purchase' },
       { status: 500 }
     );
   }
