@@ -3,6 +3,8 @@ import sequelize from '../database';
 
 interface PurchaseAttributes {
   id: string;
+  name?: string;
+  description?: string;
   total_amount: number;
   status: 'pending' | 'completed' | 'cancelled';
   supplier_name?: string;
@@ -19,6 +21,8 @@ interface PurchaseCreationAttributes extends Omit<PurchaseAttributes, 'id' | 'cr
 
 class Purchase extends Model<PurchaseAttributes, PurchaseCreationAttributes> implements PurchaseAttributes {
   public id!: string;
+  public name?: string;
+  public description?: string;
   public total_amount!: number;
   public status!: 'pending' | 'completed' | 'cancelled';
   public supplier_name?: string;
@@ -37,6 +41,14 @@ Purchase.init(
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
+    },
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     total_amount: {
       type: DataTypes.INTEGER,

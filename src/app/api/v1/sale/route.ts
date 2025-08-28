@@ -4,6 +4,31 @@ import { sendNotification } from '@/lib/notification';
 import { Op } from 'sequelize';
 import sequelize from '@/lib/database';
 
+// Function to generate unique sale number
+const generateSaleNo = async (): Promise<string> => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const datePrefix = `${year}${month}${day}`;
+  
+  // Get the count of sales for today
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  
+  const todaySalesCount = await Sale.count({
+    where: {
+      created_at: {
+        [Op.gte]: startOfDay,
+        [Op.lt]: endOfDay
+      }
+    }
+  });
+  
+  const sequenceNumber = String(todaySalesCount + 1).padStart(3, '0');
+  return `SALE-${datePrefix}-${sequenceNumber}`;
+};
+
 interface SaleItemData {
   id: string;
   product_id: string;
@@ -92,15 +117,35 @@ export async function POST(request: NextRequest) {
     // Calculate total amount
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+    // Validate that user exists if userId is provided
+    let validUserId: string | undefined = undefined;
+    if (userId) {
+      const user = await User.findByPk(userId);
+      if (!user) {
+        console.log(`User with ID ${userId} not found, creating sale without user_id`);
+        validUserId = undefined;
+      } else {
+        validUserId = userId;
+      }
+    }
+
+    // Generate unique sale number
+    const sale_no = await generateSaleNo();
+    
     // Create sale first
-    const saleData = {
+    const saleData: any = {
+      sale_no,
       total_amount,
       status: 'pending' as const,
       customer_name,
       table_number,
       notes,
-      user_id: userId || undefined // Handle case where userId might be null
     };
+    
+    // Only add user_id if it's defined
+    if (validUserId) {
+      saleData.user_id = validUserId;
+    }
     
     let sale: any;
     try {
@@ -196,6 +241,7 @@ export async function POST(request: NextRequest) {
         message: 'Sale created successfully',
         sale: {
           id: saleResponseData.id,
+          sale_no: saleResponseData.sale_no,
           total_amount: saleResponseData.total_amount,
           status: saleResponseData.status,
           customer_name: saleResponseData.customer_name,
@@ -227,16 +273,16 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Get user info from middleware headers
-    // const userId = request.headers.get('x-user-id');
-    // const userRole = request.headers.get('x-user-role');
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
 
-    // // Additional authentication check
-    // if (!userId || !userRole) {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Authentication required' },
-    //     { status: 401 }
-    //   );
-    // }
+    // Additional authentication check
+    if (!userId || !userRole) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -289,6 +335,7 @@ export async function GET(request: NextRequest) {
         
         return {
           id: saleData.id,
+          sale_no: saleData.sale_no,
           total_amount: saleData.total_amount,
           status: saleData.status,
           customer_name: saleData.customer_name,

@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
 
 // Explicitly configure for MySQL only
-const sequelize = new Sequelize('rest', 'root', 'R>Xb2jP/', {
+const sequelize = new Sequelize('test_rest_db', 'root', 'R>Xb2jP/', {
   host: 'localhost',
   dialect: 'mysql',
   port: 3306,
@@ -19,7 +19,6 @@ const sequelize = new Sequelize('rest', 'root', 'R>Xb2jP/', {
   dialectOptions: {
     // MySQL specific options
     charset: 'utf8mb4',
-    collate: 'utf8mb4_unicode_ci',
     // Disable other dialect features
     supportBigNumbers: true,
     bigNumberStrings: true,

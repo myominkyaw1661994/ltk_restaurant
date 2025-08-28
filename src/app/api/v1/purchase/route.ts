@@ -11,6 +11,8 @@ interface PurchaseItemData {
 }
 
 interface CreatePurchaseRequest {
+  name?: string;
+  description?: string;
   items: PurchaseItemData[];
   supplier_name?: string;
   purchase_date?: string;
@@ -59,29 +61,34 @@ export async function GET(request: NextRequest) {
       offset: (page - 1) * pageSize,
     });
 
-    const formattedPurchases = purchases.map(purchase => ({
-      id: purchase.id,
-      total_amount: purchase.total_amount,
-      status: purchase.status,
-      supplier_name: purchase.supplier_name,
-      purchase_date: purchase.purchase_date,
-      notes: purchase.notes,
-      created_at: purchase.created_at,
-      updated_at: purchase.updated_at,
-      user: purchase.user ? {
-        id: purchase.user.id,
-        username: purchase.user.username,
-        email: purchase.user.email
-      } : null,
-      items: purchase.items?.map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        price: item.price,
-        quantity: item.quantity,
-        total: item.total
-      })) || []
-    }));
+    const formattedPurchases = purchases.map((purchase: any) => {
+      const purchaseData = purchase.toJSON ? purchase.toJSON() : purchase;
+      return {
+        id: purchaseData.id,
+        name: purchaseData.name,
+        description: purchaseData.description,
+        total_amount: purchaseData.total_amount,
+        status: purchaseData.status,
+        supplier_name: purchaseData.supplier_name,
+        purchase_date: purchaseData.purchase_date,
+        notes: purchaseData.notes,
+        created_at: purchaseData.created_at,
+        updated_at: purchaseData.updated_at,
+        user: purchaseData.user ? {
+          id: purchaseData.user.id,
+          username: purchaseData.user.username,
+          email: purchaseData.user.email
+        } : null,
+        items: purchaseData.items ? purchaseData.items.map((item: any) => ({
+          id: item.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          price: item.price,
+          quantity: item.quantity,
+          total: item.total
+        })) : []
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -112,6 +119,9 @@ export async function POST(request: NextRequest) {
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
 
+    console.log('userId', userId);
+    console.log('userRole', userRole);
+
     // Additional authentication check
     if (!userId || !userRole) {
       return NextResponse.json(
@@ -121,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreatePurchaseRequest = await request.json();
-    const { items, supplier_name, purchase_date, notes } = body;
+    const { name, description, items, supplier_name, purchase_date, notes } = body;
 
     // Validate the request body
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -151,21 +161,55 @@ export async function POST(request: NextRequest) {
     // Calculate total amount
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+    // Validate that user exists if userId is provided
+    let validUserId: string | undefined = undefined;
+    if (userId) {
+      console.log(`Looking for user with ID: ${userId}`);
+      const user = await User.findByPk(userId);
+      if (!user) {
+        console.log(`User with ID ${userId} not found, creating purchase without user_id`);
+        validUserId = undefined;
+      } else {
+        validUserId = userId;
+        console.log(`User found: ${user.username} (${user.email}), will create purchase with user_id: ${validUserId}`);
+      }
+    } else {
+      console.log('No userId provided in headers');
+    }
+    
+
     // Create purchase with transaction
     const result = await Purchase.sequelize!.transaction(async (t) => {
-      // Create purchase
-      const purchase = await Purchase.create({
+      // Create purchase data
+      const purchaseData: any = {
+        name,
+        description,
         total_amount,
         status: 'pending',
         supplier_name,
         purchase_date: purchase_date ? new Date(purchase_date) : new Date(),
         notes,
-        user_id: userId
-      }, { transaction: t });
+      };
+      
+      // Only add user_id if it's defined
+      if (validUserId) {
+        purchaseData.user_id = validUserId;
+        console.log(`Adding user_id to purchase: ${validUserId}`);
+      } else {
+        console.log('No valid user_id, creating purchase without user_id');
+      }
+      
+      console.log('Final purchase data to be created:', JSON.stringify(purchaseData, null, 2));
+      
+      // Create purchase
+      const purchase = await Purchase.create(purchaseData, { transaction: t });
+      
+      console.log('Purchase created with ID:', purchase.id);
+      console.log('Purchase user_id:', purchase.user_id);
 
       // Create purchase items
       const purchaseItems = items.map(item => ({
-        purchase_id: purchase.id,
+        purchase_id: purchase.getDataValue('id'),
         product_id: item.product_id,
         product_name: item.product_name,
         price: item.price,
@@ -184,10 +228,13 @@ export async function POST(request: NextRequest) {
         message: 'Purchase created successfully',
         purchase: {
           id: result.id,
+          name: result.name,
+          description: result.description,
           total_amount: result.total_amount,
           status: result.status,
           supplier_name: result.supplier_name,
           purchase_date: result.purchase_date,
+          user_id: result.user_id,
           notes: result.notes
         }
       },

@@ -3,6 +3,7 @@ import sequelize from '../database';
 
 interface SaleAttributes {
   id: string;
+  sale_no: string;
   total_amount: number;
   status: 'pending' | 'completed' | 'cancelled';
   customer_name?: string;
@@ -25,6 +26,11 @@ Sale.init(
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
+    },
+    sale_no: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
     },
     total_amount: {
       type: DataTypes.INTEGER,

@@ -15,16 +15,8 @@ interface PurchaseItemAttributes {
 
 interface PurchaseItemCreationAttributes extends Omit<PurchaseItemAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
-class PurchaseItem extends Model<PurchaseItemAttributes, PurchaseItemCreationAttributes> implements PurchaseItemAttributes {
-  public id!: string;
-  public purchase_id!: string;
-  public product_id!: string;
-  public product_name!: string;
-  public price!: number;
-  public quantity!: number;
-  public total!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+class PurchaseItem extends Model<PurchaseItemAttributes, PurchaseItemCreationAttributes> {
+  // Remove public class fields to avoid shadowing Sequelize's attribute getters/setters
 }
 
 PurchaseItem.init(

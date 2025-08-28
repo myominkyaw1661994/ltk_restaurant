@@ -4,6 +4,7 @@ import { Sale, SaleItem, sequelize } from '@/lib/models';
 // Extend the Sale interface to include the items association
 interface SaleWithItems {
   id: string;
+  sale_no: string;
   total_amount: number;
   status: 'pending' | 'completed' | 'cancelled';
   customer_name?: string;
@@ -22,6 +23,7 @@ const SALE_ITEM_ATTRIBUTES = ['id', 'product_id', 'product_name', 'price', 'quan
 // Helper function to format sale data
 const formatSaleData = (sale: any) => ({
   id: sale.id,
+  sale_no: sale.sale_no,
   total_amount: sale.total_amount,
   status: sale.status,
   customer_name: sale.customer_name,

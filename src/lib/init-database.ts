@@ -1,5 +1,7 @@
 import { testConnection } from './database';
 import { syncDatabase, User, Product, Table, Purchase, PurchaseItem } from './models';
+import { addPurchaseFields, addSaleNo } from './migrations';
+import { validateForeignKeyConstraints } from './foreign-key-validator';
 import bcrypt from 'bcryptjs';
 
 export const initializeDatabase = async () => {
@@ -9,6 +11,13 @@ export const initializeDatabase = async () => {
     
     // Sync models with database
     await syncDatabase();
+    
+    // Run migrations
+    await addPurchaseFields();
+    await addSaleNo();
+    
+    // Validate and fix foreign key constraints
+    await validateForeignKeyConstraints();
     
     // Create default admin user if it doesn't exist
     const adminExists = await User.findOne({ where: { email: 'admin@restaurant.com' } });

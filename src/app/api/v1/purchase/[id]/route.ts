@@ -31,6 +31,8 @@ export async function GET(
 
     const formattedPurchase = {
       id: purchase.id,
+      name: purchase.name,
+      description: purchase.description,
       total_amount: purchase.total_amount,
       status: purchase.status,
       supplier_name: purchase.supplier_name,
@@ -76,7 +78,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { supplier_name, status, notes } = body;
+    const { name, description, supplier_name, status, notes } = body;
 
     // Validate status
     if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
@@ -88,6 +90,8 @@ export async function PUT(
 
     // Update purchase
     await purchase.update({
+      name: name || null,
+      description: description || null,
       supplier_name: supplier_name || null,
       status,
       notes: notes || null
@@ -98,6 +102,8 @@ export async function PUT(
       message: 'Purchase updated successfully',
       purchase: {
         id: purchase.id,
+        name: purchase.name,
+        description: purchase.description,
         total_amount: purchase.total_amount,
         status: purchase.status,
         supplier_name: purchase.supplier_name,
