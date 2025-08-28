@@ -11,21 +11,12 @@ interface SaleAttributes {
   user_id?: string;
   created_at?: Date;
   updated_at?: Date;
-  items?: any[];
 }
 
 interface SaleCreationAttributes extends Omit<SaleAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
-class Sale extends Model<SaleAttributes, SaleCreationAttributes> implements SaleAttributes {
-  public id!: string;
-  public total_amount!: number;
-  public status!: 'pending' | 'completed' | 'cancelled';
-  public customer_name?: string;
-  public table_number?: string;
-  public notes?: string;
-  public user_id?: string;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+class Sale extends Model<SaleAttributes, SaleCreationAttributes> {
+  // Remove public class fields to avoid shadowing Sequelize getters/setters
 }
 
 Sale.init(
@@ -75,5 +66,7 @@ Sale.init(
     underscored: true,
   }
 );
+
+// Define the hasMany association - will be set up in models/index.ts
 
 export default Sale; 

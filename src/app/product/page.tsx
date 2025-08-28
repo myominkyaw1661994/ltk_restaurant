@@ -14,6 +14,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface Product {
   id: string;
@@ -33,6 +35,9 @@ interface PaginationInfo {
   hasPreviousPage: boolean;
 }
 
+type SortField = 'product_name' | 'category' | 'price';
+type SortDirection = 'asc' | 'desc';
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +46,9 @@ export default function ProductsPage() {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'all' | 'sale' | 'purchase'>('all');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [sortField, setSortField] = useState<SortField>('product_name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [pagination, setPagination] = useState<PaginationInfo>({
     currentPage: 1,
     pageSize: 10,
@@ -56,6 +64,52 @@ export default function ProductsPage() {
   // Check if user can perform admin actions (not staff)
   const canPerformAdminActions = () => {
     return currentUser && currentUser.role !== 'Staff';
+  };
+
+  // Sort products based on current sort field and direction
+  const sortedProducts = [...products].sort((a, b) => {
+    let aValue: string | number;
+    let bValue: string | number;
+
+    switch (sortField) {
+      case 'product_name':
+        aValue = a.product_name.toLowerCase();
+        bValue = b.product_name.toLowerCase();
+        break;
+      case 'category':
+        aValue = a.category.toLowerCase();
+        bValue = b.category.toLowerCase();
+        break;
+      case 'price':
+        aValue = a.price;
+        bValue = b.price;
+        break;
+      default:
+        aValue = a.product_name.toLowerCase();
+        bValue = b.product_name.toLowerCase();
+    }
+
+    if (sortDirection === 'asc') {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+    } else {
+      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+    }
+  });
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return null;
+    }
+    return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
   const fetchProducts = async (page: number, pageSize: number) => {
@@ -206,14 +260,34 @@ export default function ProductsPage() {
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Products</h1>
-        {canPerformAdminActions() && (
-          <Link 
-            href="/product/new" 
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Add New Product
-          </Link>
-        )}
+        <div className="flex items-center gap-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Grid</span>
+            <button
+              onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                viewMode === 'table' ? 'bg-blue-600' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-black transition-transform ${
+                  viewMode === 'table' ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className="text-sm text-gray-600">Table</span>
+          </div>
+          
+          {canPerformAdminActions() && (
+            <Link 
+              href="/product/new" 
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Add New Product
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Type Filter */}
@@ -254,37 +328,127 @@ export default function ProductsPage() {
         <div className="text-center text-gray-500">No products found</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map((product) => (
-              <div 
-                key={product.id} 
-                className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <h2 className="text-xl font-semibold mb-2">{product.product_name}</h2>
-                <p className="text-gray-600">Price: ${product.price}</p>
-                <p className="text-gray-600">Type: {product.type === 'sale' ? 'For Sale' : 'For Purchase'}</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Created: {new Date(product.created_at).toLocaleDateString()}
-                </p>
-                {canPerformAdminActions() && (
-                  <div className="mt-4 flex justify-end space-x-2">
-                    <Link
-                      href={`/product/edit/${product.id}`}
-                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+          {viewMode === 'grid' ? (
+            // Grid View
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedProducts.map((product) => (
+                <div 
+                  key={product.id} 
+                  className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <h2 className="text-xl font-semibold mb-2">{product.product_name}</h2>
+                  <p className="text-gray-600">Price: {product.price}MMK</p>
+                  <p className="text-gray-600">Type: {product.type === 'sale' ? 'For Sale' : 'For Purchase'}</p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Created: {new Date(product.created_at).toLocaleDateString()}
+                  </p>
+                  {canPerformAdminActions() && (
+                    <div className="mt-4 flex justify-end space-x-2">
+                      <Link
+                        href={`/product/edit/${product.id}`}
+                        className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteClick(product.id)}
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Table View
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white dark:bg-black dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
+                <thead className="dark:bg-black dark:text-white">
+                  <tr>
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('product_name')}
                     >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => handleDeleteClick(product.id)}
-                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                      <div className="flex items-center gap-1">
+                        Product Name
+                        {getSortIcon('product_name')}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('category')}
                     >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                      <div className="flex items-center gap-1">
+                        Category
+                        {getSortIcon('category')}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('price')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Price
+                        {getSortIcon('price')}
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
+                      Created
+                    </th>
+                    {canPerformAdminActions() && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-black dark:text-white divide-y divide-gray-200">
+                  {sortedProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-900 dark:border-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {product.product_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+                        {product.category}
+                      </td>
+                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+                         {product.price.toLocaleString()} MMK
+                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+                        {product.type === 'sale' ? 'For Sale' : 'For Purchase'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+                        {new Date(product.created_at).toLocaleDateString()}
+                      </td>
+                      {canPerformAdminActions() && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+                          <div className="flex space-x-2">
+                            <Link
+                              href={`/product/edit/${product.id}`}
+                              className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                            >
+                              Edit
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteClick(product.id)}
+                              className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Pagination Controls */}
           <div className="mt-8 space-y-4">
@@ -342,7 +506,7 @@ export default function ProductsPage() {
 
           {loading && products.length > 0 && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white dark:border-gray-700"></div>
             </div>
           )}
         </>

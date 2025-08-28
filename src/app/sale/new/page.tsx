@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { requestNotificationPermission } from '@/lib/notification';
 
 interface SaleItem {
-  product_id: string
+  id: string
   product_name: string
   price: number
   quantity: number
@@ -62,7 +62,7 @@ export default function NewSalePage() {
         if (prodData.products.length > 0) {
           setItems([
             {
-              product_id: prodData.products[0].id,
+              id: prodData.products[0].id,
               product_name: prodData.products[0].product_name,
               price: prodData.products[0].price,
               quantity: 1,
@@ -94,14 +94,14 @@ export default function NewSalePage() {
     const product = products.find(p => p.id === productId)
     if (!product) return
     setItems(items => items.map((item, i) =>
-      i === idx ? { ...item, product_id: product.id, product_name: product.product_name, price: product.price, total: product.price * item.quantity } : item
+      i === idx ? { ...item, id: product.id, product_name: product.product_name, price: product.price, total: product.price * item.quantity } : item
     ))
   }
 
   const handleAddItem = () => {
     if (products.length === 0) return
     const firstProduct = products[0]
-    setItems([...items, { product_id: firstProduct.id, product_name: firstProduct.product_name, price: firstProduct.price, quantity: 1, total: firstProduct.price }])
+    setItems([...items, { id: firstProduct.id, product_name: firstProduct.product_name, price: firstProduct.price, quantity: 1, total: firstProduct.price }])
   }
 
   const handleRemoveItem = (idx: number) => {
@@ -195,7 +195,7 @@ export default function NewSalePage() {
                     <TableCell>
                       <select
                         className="border rounded px-2 py-1 w-full"
-                        value={item.product_id}
+                        value={item.id}
                         onChange={e => handleProductChange(idx, e.target.value)}
                       >
                         {products.map(p => (

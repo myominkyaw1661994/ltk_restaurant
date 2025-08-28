@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Sale, SaleItem, User } from '@/lib/models';
+import { Sale, SaleItem, User, Product } from '@/lib/models';
 import { sendNotification } from '@/lib/notification';
 import { Op } from 'sequelize';
+import sequelize from '@/lib/database';
 
 interface SaleItemData {
+  id: string;
   product_id: string;
   product_name: string;
   price: number;
@@ -20,6 +22,7 @@ interface CreateSaleRequest {
 
 export async function POST(request: NextRequest) {
   try {
+
     // Get user info from middleware headers
     const userId = request.headers.get('x-user-id');
     const userRole = request.headers.get('x-user-role');
@@ -43,6 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+
     // Validate each item
     for (const item of items) {
       if (!item.product_id || !item.product_name || !item.price || !item.quantity) {
@@ -60,40 +64,125 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate that all products exist
+    const productIds = items.map(item => item.product_id);
+    const existingProducts = await Product.findAll({
+      where: { id: { [Op.in]: productIds } }
+    });
+
+    console.log("existingProducts", existingProducts)
+    
+    if (existingProducts.length !== productIds.length) {
+      const existingProductIds = existingProducts.map(p => p.id);
+      const missingProductIds = productIds.filter(id => !existingProductIds.includes(id));
+      console.log('Missing product IDs:', missingProductIds);
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Some products do not exist',
+          missingProductIds,
+          requestedProductIds: productIds,
+          foundProductIds: existingProductIds
+        },
+        { status: 400 }
+      );
+    }
+
     // Calculate total amount
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Create sale with transaction
-    const result = await Sale.sequelize!.transaction(async (t) => {
-      // Create sale
-      const sale = await Sale.create({
-        total_amount,
-        status: 'pending',
-        customer_name,
-        table_number,
-        notes,
-        user_id: userId
-      }, { transaction: t });
+    // Create sale first
+    const saleData = {
+      total_amount,
+      status: 'pending' as const,
+      customer_name,
+      table_number,
+      notes,
+      user_id: userId || undefined // Handle case where userId might be null
+    };
+    
+    let sale: any;
+    try {
+      // Use Sequelize model for sale creation
+      sale = await Sale.create(saleData);
+      
+      
+    } catch (createError) {
+      console.error('Sale creation failed:', createError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Sale creation failed',
+          details: createError instanceof Error ? createError.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+    
+    // Validate sale was created properly
+    if (!sale || !sale.id) {
+      console.error('Sale creation failed - no ID returned');
+      console.error('Sale object:', sale);
+      console.error('Sale object type:', typeof sale);
+      console.error('Sale object keys:', Object.keys(sale || {}));
+      return NextResponse.json(
+        { success: false, error: 'Sale creation failed - no ID returned' },
+        { status: 500 }
+      );
+    }
 
-      // Create sale items
-      const saleItems = items.map(item => ({
-        sale_id: sale.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        price: item.price,
-        quantity: item.quantity,
-        total: item.price * item.quantity
-      }));
+    // Create sale items
+    const saleItems = items.map(item => ({
+      sale_id: sale.id,
+      product_id: item.product_id,
+      product_name: item.product_name,
+      price: item.price,
+      quantity: item.quantity,
+      total: item.price * item.quantity
+    }));
 
-      await SaleItem.bulkCreate(saleItems, { transaction: t });
+    console.log('Creating sale items:', saleItems);
 
-      return sale;
-    });
+    // Create sale items one by one using Sequelize model
+    const createdItems = [];
+    for (const item of saleItems) {
+      try {
+        console.log('Creating item with sale_id:', item.sale_id);
+        console.log('Item data:', JSON.stringify(item, null, 2));
+        
+        const createdItem = await SaleItem.create(item);
+        console.log('Item created successfully:', (createdItem as any).id);
+        createdItems.push(createdItem);
+      } catch (itemError) {
+        console.error('Error creating sale item:', itemError);
+        console.error('Item data that failed:', JSON.stringify(item, null, 2));
+        
+        // Delete the sale since items couldn't be created
+        try {
+          await sale.destroy();
+          console.log('Sale deleted due to item creation failure');
+        } catch (deleteError) {
+          console.error('Failed to delete sale:', deleteError);
+        }
+        
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Failed to create sale items',
+            details: itemError instanceof Error ? itemError.message : 'Unknown error'
+          },
+          { status: 500 }
+        );
+      }
+    }
+    
+    console.log('Sale items created:', createdItems.length);
 
     // Send notification
     await sendNotification(
       'New Sale Created',
-      `Sale #${result.id} has been created with total amount of ${total_amount} MMK`
+      `Sale #${sale.id} has been created with total amount of ${total_amount} MMK`
     );
 
     return NextResponse.json(
@@ -101,13 +190,13 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Sale created successfully',
         sale: {
-          id: result.id,
-          total_amount: result.total_amount,
-          status: result.status,
-          customer_name: result.customer_name,
-          table_number: result.table_number,
-          notes: result.notes,
-          created_at: result.created_at
+          id: sale.id,
+          total_amount: sale.total_amount,
+          status: sale.status,
+          customer_name: sale.customer_name,
+          table_number: sale.table_number,
+          notes: sale.notes,
+          created_at: sale.created_at
         }
       },
       { status: 201 }
@@ -143,10 +232,6 @@ export async function GET(request: NextRequest) {
     const table_number = searchParams.get('table_number');
     const customer_name = searchParams.get('customer_name');
 
-    console.log("page", page)
-
-    console.log('Fetching sales with pagination:', { page, pageSize, status });
-
     // Build where clause
     const whereClause: any = {};
     if (status) {
@@ -181,32 +266,38 @@ export async function GET(request: NextRequest) {
         ],
         order: [['created_at', 'DESC']],
         limit: pageSize,
-        offset: (page - 1) * pageSize,
+        offset: (page - 1) * pageSize
       });
 
-      const formattedSales = sales.map(sale => ({
-        id: sale.id,
-        total_amount: sale.total_amount,
-        status: sale.status,
-        customer_name: sale.customer_name,
-        table_number: sale.table_number,
-        notes: sale.notes,
-        created_at: sale.created_at,
-        updated_at: sale.updated_at,
-        user: sale.user ? {
-          id: sale.user.id,
-          username: sale.user.username,
-          email: sale.user.email
-        } : null,
-        items: sale.items?.map(item => ({
-          id: item.id,
-          product_id: item.product_id,
-          product_name: item.product_name,
-          price: item.price,
-          quantity: item.quantity,
-          total: item.total
-        })) || []
-      }));
+      console.log("sales", sales)
+
+      const formattedSales = sales.map((sale: any) => {
+        const saleData = sale.toJSON ? sale.toJSON() : sale;
+        
+        return {
+          id: saleData.id,
+          total_amount: saleData.total_amount,
+          status: saleData.status,
+          customer_name: saleData.customer_name,
+          table_number: saleData.table_number,
+          notes: saleData.notes,
+          created_at: saleData.created_at,
+          updated_at: saleData.updated_at,
+          user: saleData.user ? {
+            id: saleData.user.id,
+            username: saleData.user.username,
+            email: saleData.user.email
+          } : null,
+          items: saleData.items ? saleData.items.map((item: any) => ({
+            id: item.id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          })) : []
+        };
+      });
 
       return NextResponse.json({
         success: true,

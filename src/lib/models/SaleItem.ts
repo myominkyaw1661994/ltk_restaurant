@@ -15,16 +15,8 @@ interface SaleItemAttributes {
 
 interface SaleItemCreationAttributes extends Omit<SaleItemAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
-class SaleItem extends Model<SaleItemAttributes, SaleItemCreationAttributes> implements SaleItemAttributes {
-  public id!: string;
-  public sale_id!: string;
-  public product_id!: string;
-  public product_name!: string;
-  public price!: number;
-  public quantity!: number;
-  public total!: number;
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
+class SaleItem extends Model<SaleItemAttributes, SaleItemCreationAttributes> {
+  // Remove public class fields to avoid shadowing Sequelize getters/setters
 }
 
 SaleItem.init(
@@ -83,5 +75,7 @@ SaleItem.init(
     underscored: true,
   }
 );
+
+// Define the belongsTo association - will be set up in models/index.ts
 
 export default SaleItem; 

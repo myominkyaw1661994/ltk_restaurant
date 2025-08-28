@@ -11,8 +11,19 @@ import PurchaseItem from './PurchaseItem';
 Sale.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 User.hasMany(Sale, { foreignKey: 'user_id', as: 'sales' });
 
-Sale.hasMany(SaleItem, { foreignKey: 'sale_id', as: 'items' });
-SaleItem.belongsTo(Sale, { foreignKey: 'sale_id', as: 'sale' });
+// Sale and SaleItem associations
+Sale.hasMany(SaleItem, { 
+  foreignKey: 'sale_id', 
+  as: 'items',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE'
+});
+SaleItem.belongsTo(Sale, { 
+  foreignKey: 'sale_id', 
+  as: 'sale',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE'
+});
 
 SaleItem.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 Product.hasMany(SaleItem, { foreignKey: 'product_id', as: 'saleItems' });
