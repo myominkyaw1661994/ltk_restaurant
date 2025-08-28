@@ -165,8 +165,25 @@ export default function Home() {
   // Get all years in the data for dropdown
   const allYears = React.useMemo(() => {
     const years = new Set<number>()
-    summary.recentSales.forEach(s => years.add(new Date(s.created_at).getFullYear()))
-    summary.recentPurchases.forEach(p => years.add(new Date(p.created_at).getFullYear()))
+    
+    summary.recentSales.forEach(s => {
+      if (s.created_at) {
+        const year = new Date(s.created_at).getFullYear()
+        if (!isNaN(year)) {
+          years.add(year)
+        }
+      }
+    })
+    
+    summary.recentPurchases.forEach(p => {
+      if (p.created_at) {
+        const year = new Date(p.created_at).getFullYear()
+        if (!isNaN(year)) {
+          years.add(year)
+        }
+      }
+    })
+    
     return Array.from(years).sort((a, b) => b - a)
   }, [summary.recentSales, summary.recentPurchases])
 
@@ -217,9 +234,9 @@ export default function Home() {
             value={selectedYear}
             onChange={e => setSelectedYear(Number(e.target.value))}
           >
-            {allYears.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
+              <option key={2026} value={2026}>{2026}</option>
+              <option key={2025} value={2025}>{2025}</option>
+              <option key={2024} value={2024}>{2024}</option>
           </select>
         </div>
       </div>

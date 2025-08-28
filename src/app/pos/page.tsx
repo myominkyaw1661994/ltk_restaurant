@@ -54,8 +54,6 @@ export default function POSPage() {
   const [saleDetails, setSaleDetails] = useState<any>(null)
   const [tables, setTables] = useState<Table[]>([])
 
-
-
   // Category options
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -211,7 +209,9 @@ export default function POSPage() {
         ...data.sale,
         status: data.sale.status || status
       }
-      
+
+
+      console.log("saleWithStatus", saleWithStatus)
       // Store sale details and show success dialog
       setSaleDetails(saleWithStatus)
       setShowSuccessDialog(true)

@@ -177,26 +177,39 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    console.log('Sale items created:', createdItems.length);
+    // Fetch the created sale with items for response
+    const saleWithItems = await Sale.findByPk(sale.id, {
+      include: [
+        {
+          model: SaleItem,
+          as: 'items',
+          attributes: ['id', 'product_id', 'product_name', 'price', 'quantity', 'total']
+        }
+      ]
+    });
 
-    // Send notification
-    await sendNotification(
-      'New Sale Created',
-      `Sale #${sale.id} has been created with total amount of ${total_amount} MMK`
-    );
+    const saleResponseData = (saleWithItems as any).toJSON?.() || saleWithItems;
 
     return NextResponse.json(
       { 
         success: true,
         message: 'Sale created successfully',
         sale: {
-          id: sale.id,
-          total_amount: sale.total_amount,
-          status: sale.status,
-          customer_name: sale.customer_name,
-          table_number: sale.table_number,
-          notes: sale.notes,
-          created_at: sale.created_at
+          id: saleResponseData.id,
+          total_amount: saleResponseData.total_amount,
+          status: saleResponseData.status,
+          customer_name: saleResponseData.customer_name,
+          table_number: saleResponseData.table_number,
+          notes: saleResponseData.notes,
+          created_at: saleResponseData.created_at,
+          items: saleResponseData.items ? saleResponseData.items.map((item: any) => ({
+            id: item.id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          })) : []
         }
       },
       { status: 201 }
