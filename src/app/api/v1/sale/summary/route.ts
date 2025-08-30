@@ -64,8 +64,6 @@ export async function GET(request: NextRequest) {
       ],
       order: [['created_at', 'DESC']]
     });
-    console.log('Sales data:', salesData);
-    console.log(`Found ${salesData.length} sales for ${year}-${month + 1}`);
 
     // Get purchases data for the month (include all statuses)
     const purchasesData = await Purchase.findAll({
@@ -88,9 +86,6 @@ export async function GET(request: NextRequest) {
       order: [['created_at', 'DESC']]
     });
 
-    console.log('Purchases data:', purchasesData);
-
-    console.log(`Found ${purchasesData.length} purchases for ${year}-${month + 1}`);
     
     // Check for null/undefined total_amount values
     const nullAmountPurchases = purchasesData.filter(p => (p as any).total_amount === null || (p as any).total_amount === undefined);
