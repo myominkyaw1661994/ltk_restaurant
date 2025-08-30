@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         }
         // Removed status filter to include all sales
       },
+      raw: true,
       attributes: [
         'id',
         'sale_no',
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       ],
       order: [['created_at', 'DESC']]
     });
-
+    console.log('Sales data:', salesData);
     console.log(`Found ${salesData.length} sales for ${year}-${month + 1}`);
 
     // Get purchases data for the month (include all statuses)
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
         }
         // Removed status filter to include all purchases
       },
+      raw: true,
       attributes: [
         'id',
         'name',
@@ -85,6 +87,8 @@ export async function GET(request: NextRequest) {
       ],
       order: [['created_at', 'DESC']]
     });
+
+    console.log('Purchases data:', purchasesData);
 
     console.log(`Found ${purchasesData.length} purchases for ${year}-${month + 1}`);
     

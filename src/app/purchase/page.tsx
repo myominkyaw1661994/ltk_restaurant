@@ -53,6 +53,7 @@ interface Purchase {
   description: string
   total_amount: number
   items: PurchaseItem[]
+  purchase_date: string
   created_at: string
 }
 
@@ -99,7 +100,7 @@ export default function PurchaseList() {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch purchases')
       }
-
+      console.log('data', data.purchases)
       setPurchases(data.purchases)
       setPagination(data.pagination)
     } catch (err) {
@@ -216,7 +217,7 @@ export default function PurchaseList() {
               <TableRow key={purchase.id}>
                 <TableCell>{purchase.name}</TableCell>
                 <TableCell>{purchase.description}</TableCell>
-                <TableCell>{formatDate(purchase.created_at)}</TableCell>
+                <TableCell>{formatDate(purchase.purchase_date)}</TableCell>
                 <TableCell>{formatCurrency(purchase.total_amount)}</TableCell>
                 <TableCell>{purchase.items.length} items</TableCell>
                 <TableCell className="text-right">
