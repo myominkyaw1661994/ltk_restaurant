@@ -63,15 +63,14 @@ export default function Home() {
         if (!salesResponse.success) {
           throw new Error(salesResponse.error || 'Failed to fetch sales');
         }
+        console.log('Sales response:', salesResponse.data?.sales?.length || 0, 'sales')
 
         // Fetch purchases
         const purchasesResponse = await api.get<{purchases: any[]}>('/api/v1/purchase', { page: '1', pageSize: '1000' });
         if (!purchasesResponse.success) {
           throw new Error(purchasesResponse.error || 'Failed to fetch purchases');
         }
-
-        // Process data for the chart
-        const monthlyData = processMonthlyData(salesResponse.data!.sales, purchasesResponse.data!.purchases)
+        console.log('Purchases response:', purchasesResponse.data?.purchases?.length || 0, 'purchases')
 
         setSummary({
           totalSales: 0, // will be recalculated below
@@ -79,7 +78,7 @@ export default function Home() {
           profit: 0,
           recentSales: salesResponse.data!.sales,
           recentPurchases: purchasesResponse.data!.purchases,
-          monthlyData
+          monthlyData: [] // will be calculated in useEffect
         })
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An error occurred'
@@ -92,7 +91,21 @@ export default function Home() {
     fetchDashboardData()
   }, [])
 
+  // Recalculate monthly data when sales or purchases change
+  React.useEffect(() => { 
+    console.log('Recalculating monthly data. Sales:', summary.recentSales.length, 'Purchases:', summary.recentPurchases.length)
+    if (summary.recentSales.length > 0 || summary.recentPurchases.length > 0) {
+      const monthlyData = processMonthlyData(summary.recentSales, summary.recentPurchases)
+      setSummary(prev => ({
+        ...prev,
+        monthlyData
+      }))
+    }
+  }, [summary.recentSales, summary.recentPurchases])
+
   const processMonthlyData = (sales: any[], purchases: any[]) => {
+    console.log('Processing monthly data with:', { salesCount: sales.length, purchasesCount: purchases.length })
+    
     // Get the last 6 months as {year, month} objects
     const now = new Date()
     const monthsArr = []
@@ -104,6 +117,8 @@ export default function Home() {
         label: d.toLocaleString('en-US', { month: 'short', year: '2-digit' })
       })
     }
+
+    console.log('Months array:', monthsArr)
 
     // Helper to get year-month string
     const getYM = (dateStr: string) => {
@@ -123,8 +138,11 @@ export default function Home() {
       purchasesByMonth[ym] = (purchasesByMonth[ym] || 0) + purchase.total_amount
     })
 
+    console.log('Sales by month:', salesByMonth)
+    console.log('Purchases by month:', purchasesByMonth)
+
     // Build chart data for the last 6 months
-    return monthsArr.map(({ year, month, label }) => {
+    const chartData = monthsArr.map(({ year, month, label }) => {
       const ym = `${year}-${month}`
       return {
         month: label,
@@ -132,6 +150,9 @@ export default function Home() {
         purchases: purchasesByMonth[ym] || 0
       }
     })
+
+    console.log('Final chart data:', chartData)
+    return chartData
   }
 
   const formatCurrency = (amount: number) => {

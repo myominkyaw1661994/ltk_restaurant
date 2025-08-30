@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Purchase, PurchaseItem } from '@/lib/models';
+import { Purchase, PurchaseItem, User } from '@/lib/models';
 
 // Extend the Purchase interface to include the items association
 interface PurchaseWithItems extends Purchase {
@@ -18,9 +18,14 @@ export async function GET(
           model: PurchaseItem,
           as: 'items',
           attributes: ['id', 'product_id', 'product_name', 'price', 'quantity', 'total']
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email', 'role']
         }
       ]
-    }) as PurchaseWithItems;
+    });
 
     if (!purchase) {
       return NextResponse.json(
@@ -29,24 +34,36 @@ export async function GET(
       );
     }
 
+    console.log('purchase', purchase);
+
+    const purchaseData = (purchase as any).toJSON?.() || purchase;
+
     const formattedPurchase = {
-      id: purchase.id,
-      name: purchase.name,
-      description: purchase.description,
-      total_amount: purchase.total_amount,
-      status: purchase.status,
-      supplier_name: purchase.supplier_name,
-      notes: purchase.notes,
-      created_at: purchase.created_at,
-      updated_at: purchase.updated_at,
-      items: purchase.items?.map((item: PurchaseItem) => ({
+      id: purchaseData.id,
+      name: purchaseData.name,
+      description: purchaseData.description,
+      total_amount: purchaseData.total_amount,
+      status: purchaseData.status,
+      supplier_name: purchaseData.supplier_name,
+      user_id: purchaseData.user_id,
+      purchase_date: purchaseData.purchase_date,
+      notes: purchaseData.notes,
+      created_at: purchaseData.created_at,
+      updated_at: purchaseData.updated_at,
+      user: purchaseData.user ? {
+        id: purchaseData.user.id,
+        username: purchaseData.user.username,
+        email: purchaseData.user.email,
+        role: purchaseData.user.role
+      } : null,
+      items: purchaseData.items ? purchaseData.items.map((item: any) => ({
         id: item.id,
         product_id: item.product_id,
         product_name: item.product_name,
         price: item.price,
         quantity: item.quantity,
         total: item.total
-      })) || []
+      })) : []
     };
 
     return NextResponse.json({
@@ -107,6 +124,8 @@ export async function PUT(
         total_amount: purchase.total_amount,
         status: purchase.status,
         supplier_name: purchase.supplier_name,
+        user_id: purchase.user_id,
+        purchase_date: purchase.purchase_date,
         notes: purchase.notes,
         created_at: purchase.created_at,
         updated_at: purchase.updated_at

@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
         total_amount: purchaseData.total_amount,
         status: purchaseData.status,
         supplier_name: purchaseData.supplier_name,
+        user_id: purchaseData.user_id,
         purchase_date: purchaseData.purchase_date,
         notes: purchaseData.notes,
         created_at: purchaseData.created_at,
