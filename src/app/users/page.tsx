@@ -43,7 +43,7 @@ export default function UsersPage() {
         // Transform API data to match table format
         const transformedUsers: User[] = data.data.map((user: any) => ({
           id: user.id, // Keep as string - Firestore document ID
-          name: user.name,
+          name: user.username,
           email: user.email,
           password: "********",
           role: user.role,
@@ -51,6 +51,7 @@ export default function UsersPage() {
           updated_at: user.updated_at,
         }));
         setUsers(transformedUsers);
+        console.log('Users', transformedUsers);
       } else {
         setError(data.error || 'အသုံးပြုသူများကို ရယူရာတွင် အမှားရှိနေသည်');
       }
