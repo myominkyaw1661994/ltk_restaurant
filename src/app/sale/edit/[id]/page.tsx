@@ -27,6 +27,7 @@ interface Sale {
   id: string
   items: SaleItem[]
   total_amount: number
+  discount: number
   created_at: string
   status: 'pending' | 'completed' | 'cancelled'
   customer_name?: string
@@ -44,6 +45,7 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
   const [tableNumber, setTableNumber] = useState("")
   const [status, setStatus] = useState<Sale['status']>("pending")
   const [notes, setNotes] = useState("")
+  const [discount, setDiscount] = useState(0)
   const [items, setItems] = useState<SaleItem[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [saleId, setSaleId] = useState<string>('')
@@ -83,6 +85,7 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
         setTableNumber(data.sale.table_number || "")
         setStatus(data.sale.status)
         setNotes(data.sale.notes || "")
+        setDiscount(data.sale.discount || 0)
         setItems(data.sale.items)
         // Fetch products
         const prodRes = await fetch(`/api/v1/product?page=1&pageSize=1000&type=sale`)
@@ -122,7 +125,8 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
     setItems(items => items.filter((_, i) => i !== idx))
   }
 
-  const totalAmount = items.reduce((sum, item) => sum + item.total, 0)
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0)
+  const totalAmount = Math.max(0, subtotal - discount)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -132,7 +136,7 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
       const res = await fetch(`/api/v1/sale/${saleId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customer_name: customerName, table_number: tableNumber, status, notes, items })
+        body: JSON.stringify({ customer_name: customerName, table_number: tableNumber, status, notes, discount, items })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to update sale")
@@ -191,6 +195,17 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
           <Textarea value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
         <div>
+          <label className="block font-medium mb-1">Discount Amount (in cents)</label>
+          <Input 
+            type="number" 
+            value={discount} 
+            onChange={e => setDiscount(Number(e.target.value) || 0)} 
+            min={0}
+            placeholder="0"
+          />
+          <p className="text-xs text-gray-500 mt-1">Enter amount in cents (e.g., 1000 = $10.00)</p>
+        </div>
+        <div>
           <label className="block font-medium mb-2">Items</label>
           <div className="overflow-x-auto rounded-md border mb-2">
             <Table className="min-w-[600px]">
@@ -243,6 +258,18 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
                 ))}
               </TableBody>
               <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3}>Subtotal</TableCell>
+                  <TableCell>{subtotal}</TableCell>
+                  <TableCell />
+                </TableRow>
+                {discount > 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3}>Discount</TableCell>
+                    <TableCell className="text-red-600">-{discount}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                )}
                 <TableRow>
                   <TableCell colSpan={3}>Total Amount</TableCell>
                   <TableCell className="font-bold">{totalAmount}</TableCell>

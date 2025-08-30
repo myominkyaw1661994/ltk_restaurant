@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 export type Sale = {
   id: string
   total_amount: number
+  discount: number
   created_at: string
   status: 'pending' | 'completed' | 'cancelled'
   customer_name?: string
@@ -38,6 +39,19 @@ export const columns: ColumnDef<Sale>[] = [
     header: "Table",
   },
   {
+    accessorKey: "discount",
+    header: "Discount",
+    cell: ({ row }) => {
+      const discount = parseFloat(row.getValue("discount"))
+      if (discount === 0) return "-"
+      const formatted = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "MMK",
+      }).format(discount)
+      return <span className="text-red-600">-{formatted}</span>
+    },
+  },
+    {
     accessorKey: "total_amount",
     header: "Total Amount",
     cell: ({ row }) => {

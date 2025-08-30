@@ -5,6 +5,7 @@ interface SaleAttributes {
   id: string;
   sale_no: string;
   total_amount: number;
+  discount: number;
   status: 'pending' | 'completed' | 'cancelled';
   customer_name?: string;
   table_number?: string;
@@ -35,6 +36,14 @@ Sale.init(
     total_amount: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      validate: {
+        min: 0,
+      },
+    },
+    discount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
       validate: {
         min: 0,
       },

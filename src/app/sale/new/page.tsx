@@ -35,6 +35,7 @@ export default function NewSalePage() {
   const [tableNumber, setTableNumber] = useState("")
   const [status, setStatus] = useState<'pending' | 'completed' | 'cancelled'>("pending")
   const [notes, setNotes] = useState("")
+  const [discount, setDiscount] = useState(0)
   const [items, setItems] = useState<SaleItem[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
 
@@ -108,7 +109,8 @@ export default function NewSalePage() {
     setItems(items => items.filter((_, i) => i !== idx))
   }
 
-  const totalAmount = items.reduce((sum, item) => sum + item.total, 0)
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0)
+  const totalAmount = Math.max(0, subtotal - discount)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,7 +120,7 @@ export default function NewSalePage() {
       const res = await fetch(`/api/v1/sale`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customer_name: customerName, table_number: tableNumber, status, notes, items })
+        body: JSON.stringify({ customer_name: customerName, table_number: tableNumber, status, notes, discount, items })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to create sale")
@@ -177,6 +179,17 @@ export default function NewSalePage() {
           <Textarea value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
         <div>
+          <label className="block font-medium mb-1">Discount Amount (in cents)</label>
+          <Input 
+            type="number" 
+            value={discount} 
+            onChange={e => setDiscount(Number(e.target.value) || 0)} 
+            min={0}
+            placeholder="0"
+          />
+          <p className="text-xs text-gray-500 mt-1">Enter amount in cents (e.g., 1000 = $10.00)</p>
+        </div>
+        <div>
           <label className="block font-medium mb-2">Items</label>
           <div className="overflow-x-auto rounded-md border mb-2">
             <Table className="min-w-[600px]">
@@ -229,6 +242,18 @@ export default function NewSalePage() {
                 ))}
               </TableBody>
               <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3}>Subtotal</TableCell>
+                  <TableCell>{subtotal}</TableCell>
+                  <TableCell />
+                </TableRow>
+                {discount > 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3}>Discount</TableCell>
+                    <TableCell className="text-red-600">-{discount}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                )}
                 <TableRow>
                   <TableCell colSpan={3}>Total Amount</TableCell>
                   <TableCell className="font-bold">{totalAmount}</TableCell>

@@ -1,6 +1,6 @@
 import { testConnection } from './database';
 import { syncDatabase, User, Product, Table, Purchase, PurchaseItem } from './models';
-import { addPurchaseFields, addSaleNo } from './migrations';
+import { addPurchaseFields, addSaleNo, addDiscountToSales } from './migrations';
 import { validateForeignKeyConstraints } from './foreign-key-validator';
 import bcrypt from 'bcryptjs';
 import { QueryTypes } from 'sequelize';
@@ -78,6 +78,7 @@ export const initializeDatabase = async () => {
     // Run migrations
     await addPurchaseFields();
     await addSaleNo();
+    await addDiscountToSales();
     
     // Create staff tables if they don't exist
     await createStaffTables();

@@ -60,14 +60,14 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Staff created successfully',
       staff: {
-        id: staff.id,
-        name: staff.name,
-        address: staff.address,
-        phone: staff.phone,
-        salary: staff.salary,
-        status: staff.status,
-        created_at: staff.created_at,
-        updated_at: staff.updated_at
+        id: (staff as any).id,
+        name: (staff as any).name,
+        address: (staff as any).address,
+        phone: (staff as any).phone,
+        salary: (staff as any).salary,
+        status: (staff as any).status,
+        created_at: (staff as any).created_at,
+        updated_at: (staff as any).updated_at
       }
     }, { status: 201 });
 

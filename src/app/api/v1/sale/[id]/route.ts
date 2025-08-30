@@ -6,6 +6,7 @@ interface SaleWithItems {
   id: string;
   sale_no: string;
   total_amount: number;
+  discount: number;
   status: 'pending' | 'completed' | 'cancelled';
   customer_name?: string;
   table_number?: string;
@@ -25,6 +26,7 @@ const formatSaleData = (sale: any) => ({
   id: sale.id,
   sale_no: sale.sale_no,
   total_amount: sale.total_amount,
+  discount: sale.discount || 0,
   status: sale.status,
   customer_name: sale.customer_name,
   table_number: sale.table_number,

@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
         'id',
         'sale_no',
         'total_amount',
+        'discount',
         'customer_name',
         'created_at',
         'status'

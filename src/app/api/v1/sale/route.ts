@@ -43,6 +43,7 @@ interface CreateSaleRequest {
   customer_name?: string;
   table_number?: string;
   notes?: string;
+  discount?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateSaleRequest = await request.json();
-    const { items, customer_name, table_number, notes } = body;
+    const { items, customer_name, table_number, notes, discount = 0 } = body;
 
     // Validate the request body
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -115,7 +116,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate total amount
-    const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const total_amount = Math.max(0, subtotal - (discount || 0));
 
     // Validate that user exists if userId is provided
     let validUserId: string | undefined = undefined;
@@ -136,6 +138,7 @@ export async function POST(request: NextRequest) {
     const saleData: any = {
       sale_no,
       total_amount,
+      discount: discount || 0,
       status: 'pending' as const,
       customer_name,
       table_number,
@@ -243,6 +246,7 @@ export async function POST(request: NextRequest) {
           id: saleResponseData.id,
           sale_no: saleResponseData.sale_no,
           total_amount: saleResponseData.total_amount,
+          discount: saleResponseData.discount || 0,
           status: saleResponseData.status,
           customer_name: saleResponseData.customer_name,
           table_number: saleResponseData.table_number,
@@ -337,6 +341,7 @@ export async function GET(request: NextRequest) {
           id: saleData.id,
           sale_no: saleData.sale_no,
           total_amount: saleData.total_amount,
+          discount: saleData.discount || 0,
           status: saleData.status,
           customer_name: saleData.customer_name,
           table_number: saleData.table_number,

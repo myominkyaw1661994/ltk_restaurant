@@ -40,6 +40,7 @@ interface Sale {
   id: string
   items: SaleItem[]
   total_amount: number
+  discount: number
   created_at: string
   status: 'pending' | 'completed' | 'cancelled'
   customer_name?: string
@@ -213,6 +214,7 @@ const DetailPage = ({ params }: DetailPageProps) => {
                 <div>Customer</div>
                 <div>Table</div>
                 <div>Status</div>
+                {sale.discount > 0 && <div>Discount</div>}
                 {sale.notes && <div>Notes</div>}
               </div>
 
@@ -229,6 +231,7 @@ const DetailPage = ({ params }: DetailPageProps) => {
                     {sale.status}
                   </span>
                 </div>
+                {sale.discount > 0 && <div className="text-red-600">-{formatCurrency(sale.discount)}</div>}
                 {sale.notes && <div>{sale.notes}</div>}
               </div>
             </div>
@@ -257,6 +260,20 @@ const DetailPage = ({ params }: DetailPageProps) => {
             ))}
           </TableBody>
           <TableFooter>
+            <TableRow>
+              <TableCell colSpan={3}>Subtotal</TableCell>
+              <TableCell className="text-right">
+                {formatCurrency(sale.items.reduce((sum, item) => sum + item.total, 0))}
+              </TableCell>
+            </TableRow>
+            {sale.discount > 0 && (
+              <TableRow>
+                <TableCell colSpan={3}>Discount</TableCell>
+                <TableCell className="text-right text-red-600">
+                  -{formatCurrency(sale.discount)}
+                </TableCell>
+              </TableRow>
+            )}
             <TableRow>
               <TableCell colSpan={3}>Total Amount</TableCell>
               <TableCell className="text-right font-bold">

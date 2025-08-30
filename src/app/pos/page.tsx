@@ -46,6 +46,7 @@ export default function POSPage() {
   const [customerName, setCustomerName] = useState("")
   const [tableNumber, setTableNumber] = useState("")
   const [notes, setNotes] = useState("")
+  const [discount, setDiscount] = useState(0)
   const [status, setStatus] = useState<SaleStatus>("pending")
   const [cartItems, setCartItems] = useState<SaleItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -172,7 +173,8 @@ export default function POSPage() {
     setCartItems(currentItems => currentItems.filter(item => item.product_id !== productId))
   }
 
-  const totalAmount = cartItems.reduce((sum, item) => sum + item.total, 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0)
+  const totalAmount = Math.max(0, subtotal - discount)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -189,6 +191,7 @@ export default function POSPage() {
         table_number: tableNumber,
         status,
         notes,
+        discount,
         items: cartItems
       }
 
@@ -221,6 +224,7 @@ export default function POSPage() {
       setCustomerName("")
       setTableNumber("")
       setNotes("")
+      setDiscount(0)
       // Don't reset status - keep the user's selection for the next sale
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
@@ -374,6 +378,20 @@ export default function POSPage() {
                   />
                 </div>
 
+                {/* Discount */}
+                <div>
+                  <label className="block font-medium mb-1 text-sm sm:text-base">Discount Amount (in cents)</label>
+                  <Input
+                    type="number"
+                    value={discount}
+                    onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                    min={0}
+                    placeholder="0"
+                    className="text-sm sm:text-base"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter amount in cents (e.g., 1000 = $10.00)</p>
+                </div>
+
                 {/* Cart Items */}
                 <div className="rounded-md border overflow-hidden">
                   <div className="overflow-visible">
@@ -433,9 +451,19 @@ export default function POSPage() {
                     </Table>
                   </div>
                   
-                  {/* Total Amount - Always visible */}
-                  <div className="p-3 border-t">
+                  {/* Cart Summary - Always visible */}
+                  <div className="p-3 border-t space-y-2">
                     <div className="flex justify-between items-center">
+                      <span className="text-sm sm:text-base">Subtotal:</span>
+                      <span className="text-sm sm:text-base">{subtotal} MMK</span>
+                    </div>
+                    {discount > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm sm:text-base">Discount:</span>
+                        <span className="text-sm sm:text-base text-red-600">-{discount} MMK</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center border-t pt-2">
                       <span className="font-bold text-sm sm:text-base">Total Amount:</span>
                       <span className="font-bold text-lg sm:text-xl text-green-600">{totalAmount} MMK</span>
                     </div>
@@ -520,6 +548,24 @@ export default function POSPage() {
                     </TableBody>
                     <TableFooter>
                       <TableRow>
+                        <TableCell colSpan={3} className="text-right text-sm sm:text-base">
+                          Subtotal:
+                        </TableCell>
+                        <TableCell className="text-right text-sm sm:text-base">
+                          {formatCurrency(saleDetails.items.reduce((sum: number, item: SaleItem) => sum + item.total, 0))}
+                        </TableCell>
+                      </TableRow>
+                      {saleDetails.discount > 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-right text-sm sm:text-base">
+                            Discount:
+                          </TableCell>
+                          <TableCell className="text-right text-sm sm:text-base text-red-600">
+                            -{formatCurrency(saleDetails.discount)}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      <TableRow>
                         <TableCell colSpan={3} className="text-right font-bold text-sm sm:text-base">
                           Total Amount:
                         </TableCell>
@@ -550,7 +596,21 @@ export default function POSPage() {
                   const originalContent = document.body.innerHTML
                   const printWindow = window.open('', '_blank')
                   if (printWindow) {
-                    printWindow.document.write(`
+                    // Create a custom print content that includes discount
+                    const subtotal = saleDetails.items.reduce((sum: number, item: SaleItem) => sum + item.total, 0);
+                    const discount = saleDetails.discount || 0;
+                    const total = saleDetails.total_amount;
+                    
+
+                    
+                    // Build discount row HTML
+                    const discountRow = discount > 0 ? 
+                      `<tr class="discount-row">
+                        <td colspan="3" class="text-right">Discount:</td>
+                        <td class="text-right">-${formatCurrency(discount)}</td>
+                      </tr>` : '';
+                    
+                    const printHTML = `
                       <html>
                         <head>
                           <title>Sale Receipt</title>
@@ -618,6 +678,13 @@ export default function POSPage() {
                               margin-top: 10px;
                               font-size: 10px;
                             }
+                            .discount-row {
+                              color: #d32f2f !important;
+                              font-weight: bold;
+                            }
+                            .discount-row td {
+                              color: #d32f2f !important;
+                            }
                           </style>
                         </head>
                         <body>
@@ -626,7 +693,53 @@ export default function POSPage() {
                             <p>Thank you for your business!</p>
                           </div>
                           <hr/>
-                          ${printContent.innerHTML}
+                          
+                          <div class="grid">
+                            <div>Date</div>
+                            <div>${formatDate(saleDetails.created_at)}</div>
+                            ${saleDetails.customer_name ? `<div>Customer</div><div>${saleDetails.customer_name}</div>` : ''}
+                            ${saleDetails.table_number ? `<div>Table</div><div>Table ${saleDetails.table_number}</div>` : ''}
+                          </div>
+                          
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Qty</th>
+                                <th class="text-right">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              ${saleDetails.items.map((item: SaleItem) => `
+                                <tr>
+                                  <td>${item.product_name}</td>
+                                  <td>${formatCurrency(item.price)}</td>
+                                  <td>${item.quantity}</td>
+                                  <td class="text-right">${formatCurrency(item.total)}</td>
+                                </tr>
+                              `).join('')}
+                            </tbody>
+                            <tfoot>
+                              <tr>
+                                <td colspan="3" class="text-right">Subtotal:</td>
+                                <td class="text-right">${formatCurrency(subtotal)}</td>
+                              </tr>
+                              ${discountRow}
+                              <tr>
+                                <td colspan="3" class="text-right font-bold">Total Amount:</td>
+                                <td class="text-right font-bold">${formatCurrency(total)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                          
+                          ${saleDetails.notes ? `
+                            <div style="margin-top: 10px;">
+                              <div class="font-bold">Notes</div>
+                              <div>${saleDetails.notes}</div>
+                            </div>
+                          ` : ''}
+                          
                           <hr/>
                           <div class="receipt-footer">
                             <p>Thank you for dining with us!</p>
@@ -634,7 +747,9 @@ export default function POSPage() {
                           </div>
                         </body>
                       </html>
-                    `)
+                    `;
+                    
+                    printWindow.document.write(printHTML)
                     printWindow.document.close()
                     printWindow.focus()
                     printWindow.print()

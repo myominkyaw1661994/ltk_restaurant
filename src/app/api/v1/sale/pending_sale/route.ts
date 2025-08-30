@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     const sale = {
       id: latestSale.id,
       total_amount: latestSale.total_amount,
+      discount: latestSale.discount || 0,
       status: latestSale.status,
       customer_name: latestSale.customer_name,
       table_number: latestSale.table_number,
