@@ -6,6 +6,8 @@ import Sale from './Sale';
 import SaleItem from './SaleItem';
 import Purchase from './Purchase';
 import PurchaseItem from './PurchaseItem';
+import Staff from './Staff';
+import SalaryPayment from './SalaryPayment';
 
 // Define associations
 Sale.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
@@ -38,6 +40,14 @@ PurchaseItem.belongsTo(Purchase, { foreignKey: 'purchase_id', as: 'purchase' });
 PurchaseItem.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 Product.hasMany(PurchaseItem, { foreignKey: 'product_id', as: 'purchaseItems' });
 
+// Staff associations
+Staff.hasMany(SalaryPayment, { foreignKey: 'staff_id', as: 'salaryPayments' });
+SalaryPayment.belongsTo(Staff, { foreignKey: 'staff_id', as: 'staff' });
+
+// SalaryPayment and Purchase associations
+SalaryPayment.belongsTo(Purchase, { foreignKey: 'purchase_id', as: 'purchase' });
+Purchase.hasMany(SalaryPayment, { foreignKey: 'purchase_id', as: 'salaryPayments' });
+
 // Sync all models with database
 export const syncDatabase = async () => {
   try {
@@ -57,4 +67,6 @@ export {
   SaleItem,
   Purchase,
   PurchaseItem,
+  Staff,
+  SalaryPayment,
 }; 

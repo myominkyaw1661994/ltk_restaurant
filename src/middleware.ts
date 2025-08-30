@@ -7,7 +7,8 @@ const protectedRoutes = [
   '/product',
   '/sale',
   '/purchase',
-  '/pos'
+  '/pos',
+  '/staff'
 ];
 
 // API routes that require authentication
@@ -16,7 +17,8 @@ const protectedApiRoutes = [
   '/api/v1/product',
   '/api/v1/sale',
   '/api/v1/purchase',
-  '/api/v1/notification'
+  '/api/v1/notification',
+  '/api/v1/staff'
 ];
 
 // Routes that don't require authentication

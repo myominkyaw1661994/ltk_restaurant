@@ -3,6 +3,69 @@ import { syncDatabase, User, Product, Table, Purchase, PurchaseItem } from './mo
 import { addPurchaseFields, addSaleNo } from './migrations';
 import { validateForeignKeyConstraints } from './foreign-key-validator';
 import bcrypt from 'bcryptjs';
+import { QueryTypes } from 'sequelize';
+import sequelize from './database';
+
+const createStaffTables = async () => {
+  try {
+    // Check if staff table exists
+    const tables = await sequelize.query(
+      "SHOW TABLES LIKE 'staff'",
+      { type: QueryTypes.SELECT }
+    ) as any[];
+    
+    if (tables.length === 0) {
+      // Create staff table
+      await sequelize.query(`
+        CREATE TABLE staff (
+          id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+          name VARCHAR(100) NOT NULL,
+          address TEXT NOT NULL,
+          phone VARCHAR(20) NOT NULL UNIQUE,
+          salary DECIMAL(10,2) NOT NULL,
+          status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `, { type: QueryTypes.RAW });
+      console.log('Staff table created');
+    }
+    
+    // Check if salary_payments table exists
+    const salaryTables = await sequelize.query(
+      "SHOW TABLES LIKE 'salary_payments'",
+      { type: QueryTypes.SELECT }
+    ) as any[];
+    
+    if (salaryTables.length === 0) {
+      // Create salary_payments table
+      await sequelize.query(`
+        CREATE TABLE salary_payments (
+          id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+          staff_id VARCHAR(36) NOT NULL,
+          amount DECIMAL(10,2) NOT NULL,
+          payment_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          purchase_id VARCHAR(36) NOT NULL,
+          month INT NOT NULL,
+          year INT NOT NULL,
+          status ENUM('pending', 'completed', 'cancelled') NOT NULL DEFAULT 'completed',
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE ON UPDATE CASCADE,
+          UNIQUE KEY unique_staff_month_year (staff_id, month, year)
+        )
+      `, { type: QueryTypes.RAW });
+      console.log('Salary payments table created');
+    }
+    
+    console.log('Staff tables migration completed successfully');
+  } catch (error) {
+    console.error('Error creating staff tables:', error);
+    throw error;
+  }
+};
 
 export const initializeDatabase = async () => {
   try {
@@ -15,6 +78,9 @@ export const initializeDatabase = async () => {
     // Run migrations
     await addPurchaseFields();
     await addSaleNo();
+    
+    // Create staff tables if they don't exist
+    await createStaffTables();
     
     // Validate and fix foreign key constraints
     await validateForeignKeyConstraints();
