@@ -97,13 +97,7 @@ export async function PUT(
     const body = await request.json();
     const { name, description, supplier_name, status, notes } = body;
 
-    // Validate status
-    if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
-      return NextResponse.json(
-        { success: false, error: 'Status is required and must be pending, completed, or cancelled' },
-        { status: 400 }
-      );
-    }
+   
 
     // Update purchase
     await purchase.update({

@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         total_amount,
-        status: 'pending',
+        status: 'completed',
         supplier_name,
         purchase_date: purchase_date ? new Date(purchase_date) : new Date(),
         notes,
