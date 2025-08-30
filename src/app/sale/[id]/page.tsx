@@ -26,6 +26,7 @@ import {
 
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
+import { Printer } from "lucide-react"
 
 interface SaleItem {
   id: string
@@ -147,6 +148,164 @@ const DetailPage = ({ params }: DetailPageProps) => {
     }
   }
 
+  // Print receipt handler
+  const handlePrintReceipt = () => {
+    if (!sale) return;
+    
+    const subtotal = sale.items.reduce((sum, item) => sum + item.total, 0);
+    const discount = sale.discount || 0;
+    const total = sale.total_amount;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const printHTML = `
+        <html>
+          <head>
+            <title>Sale Receipt</title>
+            <style>
+              @page {
+                size: 80mm 297mm;
+                margin: 0;
+              }
+              body { 
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                width: 80mm;
+                margin: 0;
+                padding: 5mm;
+              }
+              table { 
+                width: 100%;
+                border-collapse: collapse;
+                margin: 5px 0;
+                font-size: 12px;
+              }
+              th, td { 
+                padding: 2px;
+                text-align: left;
+                border-bottom: 1px dashed #000;
+              }
+              .text-right { text-align: right; }
+              .font-bold { font-weight: bold; }
+              .text-center { 
+                text-align: center;
+                margin: 5px 0;
+              }
+              .grid { 
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 5px;
+                margin: 5px 0;
+              }
+              hr {
+                border: none;
+                border-top: 1px dashed #000;
+                margin: 5px 0;
+              }
+              .receipt-header {
+                text-align: center;
+                margin-bottom: 5px;
+              }
+              .receipt-header h2 {
+                font-size: 14px;
+                margin: 0;
+                font-weight: bold;
+              }
+              .receipt-header p {
+                font-size: 10px;
+                margin: 2px 0;
+              }
+              .receipt-footer {
+                text-align: center;
+                margin-top: 10px;
+                font-size: 10px;
+              }
+              .discount-row {
+                color: #d32f2f !important;
+                font-weight: bold;
+              }
+              .discount-row td {
+                color: #d32f2f !important;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="receipt-header">
+              <h2>Restaurant Management System</h2>
+              <p>Thank you for your business!</p>
+            </div>
+            <hr/>
+            
+            <div class="grid">
+              <div>Date</div>
+              <div>${formatDate(sale.created_at)}</div>
+              ${sale.customer_name ? `<div>Customer</div><div>${sale.customer_name}</div>` : ''}
+              ${sale.table_number ? `<div>Table</div><div>Table ${sale.table_number}</div>` : ''}
+              <div>Status</div>
+              <div>${sale.status}</div>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Price</th>
+                  <th>Qty</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sale.items.map((item) => `
+                  <tr>
+                    <td>${item.product_name}</td>
+                    <td>${formatCurrency(item.price)}</td>
+                    <td>${item.quantity}</td>
+                    <td class="text-right">${formatCurrency(item.total)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="text-right">Subtotal:</td>
+                  <td class="text-right">${formatCurrency(subtotal)}</td>
+                </tr>
+                ${discount > 0 ? `
+                  <tr class="discount-row">
+                    <td colspan="3" class="text-right">Discount:</td>
+                    <td class="text-right">-${formatCurrency(discount)}</td>
+                  </tr>
+                ` : ''}
+                <tr>
+                  <td colspan="3" class="text-right font-bold">Total Amount:</td>
+                  <td class="text-right font-bold">${formatCurrency(total)}</td>
+                </tr>
+              </tfoot>
+            </table>
+            
+            ${sale.notes ? `
+              <div style="margin-top: 10px;">
+                <div class="font-bold">Notes</div>
+                <div>${sale.notes}</div>
+              </div>
+            ` : ''}
+            
+            <hr/>
+            <div class="receipt-footer">
+              <p>Thank you for dining with us!</p>
+              <p>Please come again</p>
+            </div>
+          </body>
+        </html>
+      `;
+      
+      printWindow.document.write(printHTML);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
+
   if (loading) {
     return (
       <div className="mt-5">
@@ -182,20 +341,19 @@ const DetailPage = ({ params }: DetailPageProps) => {
           >
             Back to Sales
           </Button>
+          <Button
+            variant="outline"
+            onClick={handlePrintReceipt}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Print Receipt
+          </Button>
           {sale.status === 'pending' && (
             <Button
               variant="default"
               onClick={handleChangeStatus}
             >
               Make Completed
-            </Button>
-          )}
-          {sale.status === 'completed' && (
-            <Button
-              variant="default"
-              onClick={() => window.print()}
-            >
-              Print Slip
             </Button>
           )}
         </div>
