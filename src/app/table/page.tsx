@@ -19,13 +19,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Pencil, Trash2 } from "lucide-react";
 
 
 // const ModalContent = dynamic(() => import('@/app/pos/page'), { ssr: false });
 
 
 interface Table {
-  id: number;
+  id: string;
   name: string;
   status: TableStatus;
   sale_id: string;
@@ -40,20 +43,6 @@ interface Product {
     created_at: string;
     type: 'sale' | 'purchase';
   }
-
-// Sample table data
-// const initialTables: Table[] = [
-//   { id: 1, name: "Table 1", status: "available", sale_id: "", sale: {} },
-//   { id: 2, name: "Table 2",  status: "occupied", sale_id: "", sale: {} },
-//   { id: 3, name: "Table 3", status: "available", sale_id: "", sale: {} },
-//   { id: 4, name: "Table 4", status: "reserved", sale_id: "", sale: {} },
-//   { id: 5, name: "Table 5", status: "available", sale_id: "", sale: {} },
-//   { id: 6, name: "Table 6", status: "occupied", sale_id: "", sale: {} },
-//   { id: 7, name: "Table 7", status: "available", sale_id: "", sale: {} },
-//   { id: 8, name: "Table 8", status: "reserved", sale_id: "", sale: {} },
-//   { id: 9, name: "Table 9", status: "available", sale_id: "", sale: {} },
-//   { id: 10, name: "Table 10", status: "available", sale_id: "", sale: {} },
-// ];
 
 type TableStatus = "available" | "occupied" | "reserved";
 
@@ -78,28 +67,35 @@ export default function TableViewPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [saleProducts, setSaleProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [formName, setFormName] = useState("");
+  const [formStatus, setFormStatus] = useState<TableStatus>("available");
+  const [editingTableId, setEditingTableId] = useState<string | null>(null);
 
 
 
   // Fetch products (simulate API call)
   useEffect(() => {
-    // Simulate fetching products
-    const fetchProducts = async () => { 
-      const prodRes = await fetch(`/api/v1/product?page=1&pageSize=1000&type=sale`)
+    const fetchProducts = async () => {
+      const prodRes = await fetch(`/api/v1/product?page=1&pageSize=1000&type=sale`);
       const data = await prodRes.json();
       setProducts(data.products);
-    }
+    };
 
-
-    const fetchTables = async () => {
-      const tablesRes = await fetch(`/api/v1/table`)
-      const data = await tablesRes.json();
-      setTables(data.tables);
-    }
-
-    fetchTables();
+    loadTables();
     fetchProducts();
   }, []);
+
+  const loadTables = async () => {
+    try {
+      const tablesRes = await fetch(`/api/v1/table`);
+      const data = await tablesRes.json();
+      setTables(data.tables || []);
+    } catch (error) {
+      toast.error("Failed to load tables");
+    }
+  };
 
   // When modal opens, load sale products for the selected table
   // useEffect(() => {
@@ -130,6 +126,72 @@ export default function TableViewPage() {
     }
   };
 
+  const openCreateDialog = () => {
+    setFormMode("create");
+    setFormName("");
+    setFormStatus("available");
+    setEditingTableId(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditDialog = (table: Table) => {
+    setFormMode("edit");
+    setFormName(table.name);
+    setFormStatus(table.status);
+    setEditingTableId(table.id);
+    setIsFormOpen(true);
+  };
+
+  const handleSubmitForm = async () => {
+    if (!formName.trim()) {
+      toast.error("Table name is required");
+      return;
+    }
+
+    try {
+      if (formMode === "create") {
+        const res = await fetch(`/api/v1/table`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: formName.trim(), status: formStatus }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || "Create failed");
+        toast.success("Table created");
+      } else if (formMode === "edit" && editingTableId) {
+        const res = await fetch(`/api/v1/table/${editingTableId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: formName.trim(), status: formStatus }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || "Update failed");
+        toast.success("Table updated");
+      }
+      setIsFormOpen(false);
+      await loadTables();
+    } catch (error: any) {
+      toast.error(error?.message || "Operation failed");
+    }
+  };
+
+  const handleDeleteTable = async (table: Table, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const confirmed = window.confirm(`Delete table "${table.name}"?`);
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/v1/table/${table.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Delete failed");
+      toast.success("Table deleted");
+      await loadTables();
+      setIsModalOpen(false);
+      setSelectedTable(null);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to delete");
+    }
+  };
+
   const handleAddProduct = () => {
     if (!selectedProductId) return;
     const product = products.find((p) => p.id === selectedProductId);
@@ -152,10 +214,15 @@ export default function TableViewPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Restaurant Tables
-        </h1>
-        <p className="text-gray-600">Click on any table to view details</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Restaurant Tables
+            </h1>
+            <p className="text-gray-600">Click on any table to view details</p>
+          </div>
+          <Button onClick={openCreateDialog}>New Table</Button>
+        </div>
       </div>
 
       {/* Legend */}
@@ -210,6 +277,28 @@ export default function TableViewPage() {
           <div className="py-4 max-h-[80vh] overflow-y-auto">
             {selectedTable && (
               <div className="space-y-4">
+                {/* Actions */}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Edit table"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      openEditDialog(selectedTable);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    aria-label="Delete table"
+                    onClick={() => handleDeleteTable(selectedTable)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
                 {/* Status Dropdown */}
                 <div className="flex items-center gap-4">
                   <p>
@@ -233,7 +322,7 @@ export default function TableViewPage() {
                 </div>
 
                 {/* Add Product to Sale */}
-                <div>
+                {/* <div>
                   <label className="block mb-1 font-medium">Add Product to Table</label>
                   <div className="flex gap-2">
                     <Select value={selectedProductId} onValueChange={setSelectedProductId}>
@@ -252,7 +341,7 @@ export default function TableViewPage() {
                       Add
                     </Button>
                   </div>
-                </div>
+                </div> */}
 
 
                 {/* Sale Products List */}
@@ -282,6 +371,43 @@ export default function TableViewPage() {
 
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create/Edit Table Dialog */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>{formMode === "create" ? "New Table" : "Edit Table"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="table-name">Name</Label>
+              <Input
+                id="table-name"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="e.g., Table 1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={formStatus} onValueChange={(value: TableStatus) => setFormStatus(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="occupied">Occupied</SelectItem>
+                  <SelectItem value="reserved">Reserved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="pt-2 flex justify-end gap-2">
+              <Button variant="secondary" type="button" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+              <Button type="button" onClick={handleSubmitForm}>{formMode === "create" ? "Create" : "Save"}</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

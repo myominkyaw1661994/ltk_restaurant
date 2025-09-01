@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun, User as UserIcon, LogOut, Package, ShoppingCart, Users, BarChart3 } from "lucide-react"
+import { Moon, Sun, User as UserIcon, LogOut, Package, ShoppingCart, Users, BarChart3, UserCheck, Table } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter, usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -128,6 +128,20 @@ export default function Navbar() {
               >
                 <BarChart3 className="h-4 w-4" />
                 <span>POS</span>
+              </Link>
+              <Link
+                href="/staff"
+                className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <UserCheck className="h-4 w-4" />
+                <span>Staff</span>
+              </Link>
+              <Link
+                href="/table"
+                className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <Table className="h-4 w-4" />
+                <span>Tables</span>
               </Link>
             </div>
           )}
