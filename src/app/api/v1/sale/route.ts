@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Sale, SaleItem, User, Product } from '@/lib/models';
+import { Sale, SaleItem, User, Product, Table } from '@/lib/models';
 import { sendNotification } from '@/lib/notification';
 import { Op } from 'sequelize';
 import sequelize from '@/lib/database';
@@ -42,6 +42,7 @@ interface CreateSaleRequest {
   items: SaleItemData[];
   customer_name?: string;
   table_number?: string;
+  status?: string;
   notes?: string;
   discount?: number;
 }
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateSaleRequest = await request.json();
-    const { items, customer_name, table_number, notes, discount = 0 } = body;
+    const { items, customer_name, table_number, notes, discount = 0, status } = body;
 
     // Validate the request body
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -139,11 +140,40 @@ export async function POST(request: NextRequest) {
       sale_no,
       total_amount,
       discount: discount || 0,
-      status: 'pending' as const,
+      status: status,
       customer_name,
       table_number,
       notes,
     };
+
+    console.log("table_number", table_number)
+
+    //update the table status
+    try {
+      const table = await Table.findOne({ where: { name: table_number } });
+      console.log("table", table)
+      console.log("status", status)
+      if (table) {
+        console.log("table found, updating status")
+        let newStatus: 'available' | 'occupied' | 'reserved';
+        
+        if (status === "pending") {
+          newStatus = "occupied";
+        } else if (status === "completed") {
+          newStatus = "available";
+        } else {
+          newStatus = "available";
+        }
+        
+        await table.update({ status: newStatus });
+        console.log("table status updated successfully")
+      } else {
+        console.log("table not found for name:", table_number)
+      }
+    } catch (tableError) {
+      console.error('Error updating table status:', tableError);
+      // Don't fail the sale creation if table update fails
+    }
     
     // Only add user_id if it's defined
     if (validUserId) {

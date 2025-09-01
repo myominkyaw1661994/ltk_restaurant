@@ -41,21 +41,21 @@ export async function GET(request: NextRequest) {
 
     // Format the response
     const sale = {
-      id: latestSale.id,
-      total_amount: latestSale.total_amount,
-      discount: latestSale.discount || 0,
-      status: latestSale.status,
-      customer_name: latestSale.customer_name,
-      table_number: latestSale.table_number,
-      notes: latestSale.notes,
-      created_at: latestSale.created_at,
-      updated_at: latestSale.updated_at,
-      items: latestSale.items?.map((item: SaleItem) => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        price: item.price,
-        quantity: item.quantity,
-        total: item.total
+      id: latestSale.get('id'),
+      total_amount: latestSale.get('total_amount'),
+      discount: latestSale.get('discount') || 0,
+      status: latestSale.get('status'),
+      customer_name: latestSale.get('customer_name'),
+      table_number: latestSale.get('table_number'),
+      notes: latestSale.get('notes'),
+      created_at: latestSale.get('created_at'),
+      updated_at: latestSale.get('updated_at'),
+      items: (latestSale.get('items') as any[])?.map((item: any) => ({
+        product_id: item.get('product_id'),
+        product_name: item.get('product_name'),
+        price: item.get('price'),
+        quantity: item.get('quantity'),
+        total: item.get('total')
       })) || []
     };
 

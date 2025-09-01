@@ -109,9 +109,24 @@ export default function TableViewPage() {
     setIsModalOpen(true);
   };
 
-  const handleStatusChange = (newStatus: TableStatus) => {
-    if (selectedTable) {
+  const handleStatusChange = async (newStatus: TableStatus) => {
+    if (!selectedTable) return;
+    
+    try {
+      const res = await fetch(`/api/v1/table/${selectedTable.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: selectedTable.name, status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Update failed");
+      
+      // Update local state
       setSelectedTable({ ...selectedTable, status: newStatus });
+      await loadTables(); // Refresh table list
+      toast.success("Table status updated");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update status");
     }
   };
 

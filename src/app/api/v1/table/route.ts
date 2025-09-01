@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Table } from '@/lib/models';
 
-// GET /api/v1/table - List all tables
-export async function GET() {
+// GET /api/v1/table - List tables (optionally filter by available)
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const availableParam = searchParams.get('avaiable') ?? searchParams.get('available');
+    const onlyAvailable = typeof availableParam === 'string' && ['true', 'ture', '1', 'yes'].includes(availableParam.toLowerCase());
+
     const tables = await Table.findAll({
+      where: onlyAvailable ? { status: 'available' } : undefined,
       order: [['created_at', 'ASC']],
       raw: true,
     });
     
-    return NextResponse.json({ 
-      success: true, 
+
+    console.log("tables", tables)
+    return NextResponse.json({
+      success: true,
       tables: tables.map(table => ({
         id: table.id,
         name: table.name,

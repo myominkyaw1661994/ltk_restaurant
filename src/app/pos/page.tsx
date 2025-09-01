@@ -86,7 +86,7 @@ export default function POSPage() {
     }
 
     const fetchTables = async () => {
-      const tablesRes = await fetch(`/api/v1/table`)
+      const tablesRes = await fetch(`/api/v1/table?available=true`)
       const data = await tablesRes.json();
       setTables(data.tables);
     }
@@ -111,16 +111,19 @@ export default function POSPage() {
           // const res = await fetch(`/api/v1/sale?table_number=${tableParam}&status=pending&limit=1&sort=desc`);
           const res = await fetch(`/api/v1/sale/pending_sale?table_number=${tableParam}`);
           const data = await res.json();
-          console.log("data", data)
-          if (data.sales && data.sales.length > 0) {
-            const sale = data.sales[0];
+          console.log("res", res)
+          console.log("data pending sale", data)
+          if (data.success && data.sale) {
+            const sale = data.sale;
             setCartItems(sale.items || []);
             setCustomerName(sale.customer_name || "");
             setNotes(sale.notes || "");
             setStatus(sale.status || "pending");
+            setDiscount(sale.discount || 0);
           }
         } catch (err) {
-          // Optionally handle error
+          console.error("Error fetching pending sale:", err);
+          toast.error("Failed to load pending sale");
         }
       };
       fetchLatestSale();
@@ -197,13 +200,44 @@ export default function POSPage() {
 
       console.log('Submitting sale with status:', status) // Debug log
 
-      const res = await fetch(`/api/v1/sale`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(saleData)
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to create sale")
+      // Check if we have a table parameter and should update existing sale
+      const tableParam = searchParams.get("table");
+      let res, data;
+      
+      if (tableParam) {
+        // Try to get existing pending sale for this table
+        const pendingRes = await fetch(`/api/v1/sale/pending_sale?table_number=${tableParam}`);
+        const pendingData = await pendingRes.json();
+        
+        if (pendingData.success && pendingData.sale) {
+          // Update existing sale
+          console.log('Updating existing sale:', pendingData.sale.id)
+          res = await fetch(`/api/v1/sale/${pendingData.sale.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(saleData)
+          })
+        } else {
+          // Create new sale
+          console.log('Creating new sale for table:', tableParam)
+          res = await fetch(`/api/v1/sale`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(saleData)
+          })
+        }
+      } else {
+        // Create new sale
+        console.log('Creating new sale')
+        res = await fetch(`/api/v1/sale`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(saleData)
+        })
+      }
+      
+      data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to save sale")
       
       console.log('Received sale data:', data.sale) // Debug log
       
@@ -212,7 +246,6 @@ export default function POSPage() {
         ...data.sale,
         status: data.sale.status || status
       }
-
 
       console.log("saleWithStatus", saleWithStatus)
       // Store sale details and show success dialog
