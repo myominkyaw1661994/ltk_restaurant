@@ -24,9 +24,10 @@ interface Staff {
   updated_at: string
 }
 
-export default function EditStaffPage({ params }: { params: { id: string } }) {
+export default function EditStaffPage({ params }: { params: Promise<{ id: string }> }) {
   const [loading, setLoading] = React.useState(false)
   const [staff, setStaff] = React.useState<Staff | null>(null)
+  const [staffId, setStaffId] = React.useState<string>('')
   const [formData, setFormData] = React.useState({
     name: '',
     address: '',
@@ -36,11 +37,22 @@ export default function EditStaffPage({ params }: { params: { id: string } }) {
   })
   const router = useRouter()
 
+  // Resolve params
+  React.useEffect(() => {
+    const resolveParams = async () => {
+      const resolvedParams = await params
+      setStaffId(resolvedParams.id)
+    }
+    resolveParams()
+  }, [params])
+
   // Fetch staff data
   React.useEffect(() => {
+    if (!staffId) return
+
     const fetchStaff = async () => {
       try {
-        const response = await api.get<{success: boolean, staff: Staff}>(`/api/v1/staff/${params.id}`)
+        const response = await api.get<{success: boolean, staff: Staff}>(`/api/v1/staff/${staffId}`)
         
         if (!response.success) {
           throw new Error(response.error || 'Failed to fetch staff')
@@ -63,7 +75,7 @@ export default function EditStaffPage({ params }: { params: { id: string } }) {
     }
 
     fetchStaff()
-  }, [params.id, router])
+  }, [staffId, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,7 +101,7 @@ export default function EditStaffPage({ params }: { params: { id: string } }) {
     setLoading(true)
 
     try {
-      const response = await api.put(`/api/v1/staff/${params.id}`, {
+      const response = await api.put(`/api/v1/staff/${staffId}`, {
         name: formData.name,
         address: formData.address,
         phone: formData.phone,

@@ -23,9 +23,10 @@ interface Staff {
   updated_at: string
 }
 
-export default function PaySalaryPage({ params }: { params: { id: string } }) {
+export default function PaySalaryPage({ params }: { params: Promise<{ id: string }> }) {
   const [staff, setStaff] = React.useState<Staff | null>(null)
   const [loading, setLoading] = React.useState(false)
+  const [staffId, setStaffId] = React.useState<string>('')
   const [formData, setFormData] = React.useState({
     paymentDate: new Date().toISOString().split('T')[0],
     notes: '',
@@ -33,11 +34,22 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
   })
   const router = useRouter()
 
+  // Resolve params
+  React.useEffect(() => {
+    const resolveParams = async () => {
+      const resolvedParams = await params
+      setStaffId(resolvedParams.id)
+    }
+    resolveParams()
+  }, [params])
+
   // Fetch staff data
   React.useEffect(() => {
+    if (!staffId) return
+
     const fetchStaff = async () => {
       try {
-        const response = await api.get<{success: boolean, staff: Staff}>(`/api/v1/staff/${params.id}`)
+        const response = await api.get<{success: boolean, staff: Staff}>(`/api/v1/staff/${staffId}`)
         
         if (!response.success) {
           throw new Error(response.error || 'Failed to fetch staff')
@@ -48,7 +60,7 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
 
         if (staffData.status !== 'active') {
           toast.error('Only active staff can receive salary payments')
-          router.push(`/staff/${params.id}`)
+          router.push(`/staff/${staffId}`)
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch staff'
@@ -58,7 +70,7 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
     }
 
     fetchStaff()
-  }, [params.id, router])
+  }, [staffId, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,7 +83,7 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
     setLoading(true)
 
     try {
-      const response = await api.post(`/api/v1/staff/${params.id}/pay-salary`, {
+      const response = await api.post(`/api/v1/staff/${staffId}/pay-salary`, {
         paymentDate: formData.paymentDate,
         notes: formData.notes,
         adjustment: formData.adjustment
@@ -82,7 +94,7 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
       }
 
       toast.success('Salary payment processed successfully')
-      router.push(`/staff/${params.id}`)
+      router.push(`/staff/${staffId}`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to process salary payment'
       toast.error(errorMessage)
@@ -244,7 +256,7 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push(`/staff/${params.id}`)}
+                  onClick={() => router.push(`/staff/${staffId}`)}
                 >
                   Cancel
                 </Button>

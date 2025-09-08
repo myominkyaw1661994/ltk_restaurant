@@ -70,28 +70,28 @@ export async function GET(
       });
 
       const formattedPayments = salaryPayments.map((payment: any) => ({
-        id: payment.id,
-        staff_id: payment.staff_id,
-        amount: payment.amount,
-        payment_date: payment.payment_date,
-        month: payment.month,
-        year: payment.year,
-        status: payment.status,
-        notes: payment.notes,
-        created_at: payment.created_at,
-        updated_at: payment.updated_at,
+        id: payment.get('id'),
+        staff_id: payment.get('staff_id'),
+        amount: payment.get('amount'),
+        payment_date: payment.get('payment_date'),
+        month: payment.get('month'),
+        year: payment.get('year'),
+        status: payment.get('status'),
+        notes: payment.get('notes'),
+        created_at: payment.get('created_at'),
+        updated_at: payment.get('updated_at'),
         purchase: payment.purchase ? {
-          id: payment.purchase.id,
-          name: payment.purchase.name,
-          description: payment.purchase.description,
-          total_amount: payment.purchase.total_amount,
-          status: payment.purchase.status,
-          created_at: payment.purchase.created_at
+          id: payment.purchase.get('id'),
+          name: payment.purchase.get('name'),
+          description: payment.purchase.get('description'),
+          total_amount: payment.purchase.get('total_amount'),
+          status: payment.purchase.get('status'),
+          created_at: payment.purchase.get('created_at')
         } : null
       }));
 
       // Calculate summary statistics
-      const totalPaid = salaryPayments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+      const totalPaid = salaryPayments.reduce((sum, payment) => sum + Number(payment.get('amount')), 0);
       const averagePayment = salaryPayments.length > 0 ? totalPaid / salaryPayments.length : 0;
 
       // Get payment statistics by year
@@ -110,10 +110,10 @@ export async function GET(
         success: true,
         message: 'Salary history retrieved successfully',
         staff: {
-          id: staff.id,
-          name: staff.name,
-          current_salary: staff.salary,
-          status: staff.status
+          id: staff.get('id'),
+          name: staff.get('name'),
+          current_salary: staff.get('salary'),
+          status: staff.get('status')
         },
         salaryPayments: formattedPayments,
         summary: {

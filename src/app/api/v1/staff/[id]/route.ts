@@ -31,14 +31,14 @@ export async function GET(
     return NextResponse.json({
       success: true,
       staff: {
-        id: staff.id,
-        name: staff.name,
-        address: staff.address,
-        phone: staff.phone,
-        salary: staff.salary,
-        status: staff.status,
-        created_at: staff.created_at,
-        updated_at: staff.updated_at
+        id: staff.get('id'),
+        name: staff.get('name'),
+        address: staff.get('address'),
+        phone: staff.get('phone'),
+        salary: staff.get('salary'),
+        status: staff.get('status'),
+        created_at: staff.get('created_at'),
+        updated_at: staff.get('updated_at')
       }
     });
   } catch (error) {
@@ -81,7 +81,7 @@ export async function PUT(
     const { name, address, phone, salary, status } = body;
 
     // Check if phone number already exists (excluding current staff)
-    if (phone && phone !== staff.phone) {
+    if (phone && phone !== staff.get('phone')) {
       const existingStaff = await Staff.findOne({ where: { phone } });
       if (existingStaff) {
         return NextResponse.json(
@@ -101,25 +101,25 @@ export async function PUT(
 
     // Update staff
     await staff.update({
-      name: name || staff.name,
-      address: address || staff.address,
-      phone: phone || staff.phone,
-      salary: salary !== undefined ? salary : staff.salary,
-      status: status || staff.status
+      name: name || staff.get('name'),
+      address: address || staff.get('address'),
+      phone: phone || staff.get('phone'),
+      salary: salary !== undefined ? salary : staff.get('salary'),
+      status: status || staff.get('status')
     });
 
     return NextResponse.json({
       success: true,
       message: 'Staff updated successfully',
       staff: {
-        id: staff.id,
-        name: staff.name,
-        address: staff.address,
-        phone: staff.phone,
-        salary: staff.salary,
-        status: staff.status,
-        created_at: staff.created_at,
-        updated_at: staff.updated_at
+        id: staff.get('id'),
+        name: staff.get('name'),
+        address: staff.get('address'),
+        phone: staff.get('phone'),
+        salary: staff.get('salary'),
+        status: staff.get('status'),
+        created_at: staff.get('created_at'),
+        updated_at: staff.get('updated_at')
       }
     });
   } catch (error) {

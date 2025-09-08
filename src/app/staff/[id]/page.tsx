@@ -70,27 +70,38 @@ interface SalaryHistoryResponse {
   }
 }
 
-export default function StaffDetailPage({ params }: { params: { id: string } }) {
+export default function StaffDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [staff, setStaff] = React.useState<Staff | null>(null)
   const [salaryHistory, setSalaryHistory] = React.useState<SalaryHistoryResponse | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+  const [staffId, setStaffId] = React.useState<string>('')
   const router = useRouter()
 
   React.useEffect(() => {
+    const resolveParams = async () => {
+      const resolvedParams = await params
+      setStaffId(resolvedParams.id)
+    }
+    resolveParams()
+  }, [params])
+
+  React.useEffect(() => {
+    if (!staffId) return
+
     const fetchStaffData = async () => {
       try {
         setLoading(true)
         setError(null)
 
         // Fetch staff details
-        const staffResponse = await api.get<{success: boolean, staff: Staff}>(`/api/v1/staff/${params.id}`)
+        const staffResponse = await api.get<{success: boolean, staff: Staff}>(`/api/v1/staff/${staffId}`)
         if (!staffResponse.success) {
           throw new Error(staffResponse.error || 'Failed to fetch staff')
         }
 
         // Fetch salary history
-        const salaryResponse = await api.get<SalaryHistoryResponse>(`/api/v1/staff/${params.id}/salaries`)
+        const salaryResponse = await api.get<SalaryHistoryResponse>(`/api/v1/staff/${staffId}/salaries`)
         if (!salaryResponse.success) {
           throw new Error(salaryResponse.error || 'Failed to fetch salary history')
         }
@@ -107,7 +118,7 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
     }
 
     fetchStaffData()
-  }, [params.id])
+  }, [staffId])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
