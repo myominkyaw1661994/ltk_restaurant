@@ -155,19 +155,19 @@ export default function StaffPage() {
   return (
     <AuthGuard>
       <div className="container mx-auto py-10">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Staff Management</h1>
-            <p className="text-gray-600">Manage your restaurant staff and salary payments</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Staff Management</h1>
+            <p className="text-gray-600 text-sm sm:text-base">Manage your restaurant staff and salary payments</p>
           </div>
-          <Button onClick={() => router.push('/staff/new')}>
+          <Button onClick={() => router.push('/staff/new')} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Add Staff
           </Button>
         </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
@@ -237,7 +237,7 @@ export default function StaffPage() {
           <CardTitle>Search & Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearch} className="flex gap-4 mb-4">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4 mb-4">
             <div className="flex-1">
               <Input
                 placeholder="Search by name, phone, or address..."
@@ -245,17 +245,18 @@ export default function StaffPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button type="submit">
+            <Button type="submit" className="w-full sm:w-auto">
               <Search className="h-4 w-4 mr-2" />
               Search
             </Button>
           </form>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant={statusFilter === '' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleStatusFilter('')}
+              className="flex-1 sm:flex-none"
             >
               All
             </Button>
@@ -263,6 +264,7 @@ export default function StaffPage() {
               variant={statusFilter === 'active' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleStatusFilter('active')}
+              className="flex-1 sm:flex-none"
             >
               Active
             </Button>
@@ -270,6 +272,7 @@ export default function StaffPage() {
               variant={statusFilter === 'inactive' ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleStatusFilter('inactive')}
+              className="flex-1 sm:flex-none"
             >
               Inactive
             </Button>
@@ -290,52 +293,58 @@ export default function StaffPage() {
           ) : (
             <div className="space-y-4">
               {staff.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold">{member.name}</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <h3 className="font-semibold text-lg">{member.name}</h3>
                       {getStatusBadge(member.status)}
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{member.phone}</p>
                     <p className="text-sm text-gray-500">{member.address}</p>
                   </div>
                   
-                  <div className="text-right">
-                    <p className="font-semibold text-green-600">
-                      {formatCurrency(Number(member.salary) || 0)}
-                    </p>
-                    <p className="text-xs text-gray-500">Monthly salary</p>
-                  </div>
-                  
-                  <div className="flex gap-2 ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/staff/${member.id}`)}
-                    >
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/staff/edit/${member.id}`)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/staff/${member.id}/pay-salary`)}
-                    >
-                      Pay Salary
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(member.id, member.name)}
-                    >
-                      Delete
-                    </Button>
+                  <div className="flex flex-col sm:items-end gap-2">
+                    <div className="text-left sm:text-right">
+                      <p className="font-semibold text-green-600 text-lg">
+                        {formatCurrency(Number(member.salary) || 0)}
+                      </p>
+                      <p className="text-xs text-gray-500">Monthly salary</p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 sm:gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/staff/${member.id}`)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/staff/edit/${member.id}`)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/staff/${member.id}/pay-salary`)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        Pay
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(member.id, member.name)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -344,11 +353,11 @@ export default function StaffPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-6">
-              <p className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mt-6">
+              <p className="text-sm text-gray-600 text-center sm:text-left">
                 Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalItems)} of {totalItems} staff
               </p>
-              <div className="flex gap-2">
+              <div className="flex justify-center sm:justify-end gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -357,7 +366,7 @@ export default function StaffPage() {
                 >
                   Previous
                 </Button>
-                <span className="px-3 py-2 text-sm">
+                <span className="px-3 py-2 text-sm flex items-center">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button

@@ -155,29 +155,32 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
   return (
     <AuthGuard>
       <div className="container mx-auto py-10">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.back()}
+            className="w-full sm:w-auto"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">{staff.name}</h1>
-            <p className="text-gray-600">Staff Details</p>
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold">{staff.name}</h1>
+            <p className="text-gray-600 text-sm sm:text-base">Staff Details</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={() => router.push(`/staff/edit/${staff.id}`)}
+              className="w-full sm:w-auto"
             >
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
             <Button
               onClick={() => router.push(`/staff/${staff.id}/pay-salary`)}
+              className="w-full sm:w-auto"
             >
               <DollarSign className="h-4 w-4 mr-2" />
               Pay Salary
@@ -185,9 +188,9 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
           </div>
         </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Staff Information */}
-        <div className="md:col-span-1">
+        <div className="lg:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -262,7 +265,7 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
         </div>
 
         {/* Salary History */}
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -278,10 +281,10 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
               ) : (
                 <div className="space-y-4">
                   {salaryHistory.salaryPayments.map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={payment.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <h3 className="font-semibold text-lg">
                             {getMonthName(payment.month)} {payment.year}
                           </h3>
                           <Badge variant="outline">
@@ -296,8 +299,8 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
                         )}
                       </div>
                       
-                      <div className="text-right">
-                        <p className="font-semibold text-green-600">
+                      <div className="flex flex-col sm:items-end gap-1">
+                        <p className="font-semibold text-green-600 text-lg">
                           {formatCurrency(payment.amount)}
                         </p>
                         <p className="text-xs text-gray-500">
@@ -313,7 +316,7 @@ export default function StaffDetailPage({ params }: { params: { id: string } }) 
               {salaryHistory && salaryHistory.summary.yearlyStats.length > 0 && (
                 <div className="mt-6 pt-6 border-t">
                   <h3 className="font-semibold mb-4">Yearly Statistics</h3>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     {salaryHistory.summary.yearlyStats.map((yearStat) => (
                       <div key={yearStat.year} className="p-4 border rounded-lg">
                         <h4 className="font-semibold">{yearStat.year}</h4>

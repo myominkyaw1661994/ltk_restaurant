@@ -23,6 +23,12 @@ interface Product {
   price: number
 }
 
+interface Table {
+  id: string
+  name: string
+  status: 'available' | 'occupied' | 'reserved'
+}
+
 interface Sale {
   id: string
   items: SaleItem[]
@@ -41,6 +47,7 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
+  const [tables, setTables] = useState<Table[]>([])
   const [customerName, setCustomerName] = useState("")
   const [tableNumber, setTableNumber] = useState("")
   const [status, setStatus] = useState<Sale['status']>("pending")
@@ -92,6 +99,13 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
         const prodData = await prodRes.json()
         if (!prodRes.ok) throw new Error(prodData.error || "Failed to fetch products")
         setProducts(prodData.products)
+        
+        // Fetch tables
+        const tablesRes = await fetch(`/api/v1/table`)
+        const tablesData = await tablesRes.json()
+        if (tablesRes.ok) {
+          setTables(tablesData.tables || [])
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred")
       } finally {
@@ -117,8 +131,24 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
 
   const handleAddItem = () => {
     if (products.length === 0) return
-    const firstProduct = products[0]
-    setItems([...items, { product_id: firstProduct.id, product_name: firstProduct.product_name, price: firstProduct.price, quantity: 1, total: firstProduct.price }])
+    
+    // Find the first product that's not already in the items
+    const availableProduct = products.find(product => 
+      !items.some(item => item.product_id === product.id)
+    )
+    
+    if (!availableProduct) {
+      toast.error("All products have already been added")
+      return
+    }
+    
+    setItems([...items, { 
+      product_id: availableProduct.id, 
+      product_name: availableProduct.product_name, 
+      price: availableProduct.price, 
+      quantity: 1, 
+      total: availableProduct.price 
+    }])
   }
 
   const handleRemoveItem = (idx: number) => {
@@ -168,11 +198,11 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
                 <SelectValue placeholder="Select table" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">Table 1</SelectItem>
-                <SelectItem value="2">Table 2</SelectItem>
-                <SelectItem value="3">Table 3</SelectItem>
-                <SelectItem value="4">Table 4</SelectItem>
-                <SelectItem value="5">Table 5</SelectItem>
+                {tables.map((table) => (
+                  <SelectItem key={table.id} value={table.name}>
+                    {table.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -195,7 +225,7 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
           <Textarea value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
         <div>
-          <label className="block font-medium mb-1">Discount Amount (in cents)</label>
+          <label className="block font-medium mb-1">Discount Amount</label>
           <Input 
             type="number" 
             value={discount} 
@@ -227,9 +257,21 @@ export default function EditSalePage({ params }: { params: Promise<{ id: string 
                         value={item.product_id}
                         onChange={e => handleProductChange(idx, e.target.value)}
                       >
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>{p.product_name}</option>
-                        ))}
+                        {products.map(p => {
+                          // Check if this product is already used in other items
+                          const isUsed = items.some((otherItem, otherIdx) => 
+                            otherIdx !== idx && otherItem.product_id === p.id
+                          )
+                          return (
+                            <option 
+                              key={p.id} 
+                              value={p.id}
+                              disabled={isUsed}
+                            >
+                              {p.product_name} {isUsed ? '(Already added)' : ''}
+                            </option>
+                          )
+                        })}
                       </select>
                     </TableCell>
                     <TableCell>

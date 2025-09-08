@@ -293,7 +293,7 @@ export default function EditPurchasePage() {
                         <option value="">Select a product</option>
                         {filteredProducts?.map(product => (
                           <option key={product.id} value={product.id}>
-                            {product.product_name} - ${product.price}
+                            {product.product_name} - MMK{product.price}
                           </option>
                       ))}
                     </select>
@@ -333,7 +333,7 @@ export default function EditPurchasePage() {
                   <div className="mt-3 flex justify-between items-center">
                     <span className="text-sm text-gray-600">Total for this item:</span>
                     <Badge variant="secondary" className="text-lg font-bold">
-                      ${item.total.toFixed(2)}
+                      MMK{item.total.toFixed(2)}
                     </Badge>
                   </div>
                 </div>
@@ -366,13 +366,13 @@ export default function EditPurchasePage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">MMK{subtotal.toFixed(2)}</span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold">Total Amount:</span>
                   <span className="text-2xl font-bold text-green-600">
-                    ${totalAmount.toFixed(2)}
+                    MMK{totalAmount.toFixed(2)}
                   </span>
                 </div>
               </div>

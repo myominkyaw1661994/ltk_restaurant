@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Sale, SaleItem, sequelize } from '@/lib/models';
+import { Sale, SaleItem, Table, sequelize } from '@/lib/models';
 
 // Extend the Sale interface to include the items association
 interface SaleWithItems {
@@ -137,7 +137,7 @@ export async function PUT(
       );
     }
 
-    const { customer_name, table_number, status, notes, items } = await request.json();
+    const { customer_name, table_number, status, notes, discount, items } = await request.json();
 
     // Validate status
     if (!status || !VALID_STATUSES.includes(status)) {
@@ -155,6 +155,25 @@ export async function PUT(
       return NextResponse.json({ success: false, error: itemsValidationError }, { status: 400 });
     }
 
+    // First, delete all existing sale items for this sale
+    await SaleItem.destroy({ where: { sale_id: id }, transaction });
+
+
+    console.log("table_number", table_number)
+    console.log("status", status)
+    //update table status
+    const table = await Table.findOne({ where: { name: table_number } });
+    console.log("table", table)
+    if (table) {
+      if (status === "completed") {
+        await table.update({ status: "available" });
+      } else if (status === "pending") {
+        await table.update({ status: "occupied" });
+      } else {
+        await table.update({ status: "available" });
+      }
+    }
+
     // Process sale items and calculate total
     let totalAmount = 0;
     const itemOperations = items.map(async (item: any) => {
@@ -162,24 +181,15 @@ export async function PUT(
       totalAmount += itemTotal;
       
       const itemData = {
+        sale_id: id,
+        product_id: item.product_id,
         product_name: item.product_name,
         price: item.price,
         quantity: item.quantity,
         total: itemTotal
       };
 
-      if (!item.id) {
-        return SaleItem.create({
-          sale_id: id,
-          product_id: item.product_id || null,
-          ...itemData
-        }, { transaction });
-      } else {
-        return SaleItem.update(itemData, { 
-          where: { sale_id: id, id: item.id },
-          transaction 
-        });
-      }
+      return SaleItem.create(itemData, { transaction });
     });
 
     // Execute all item operations concurrently
@@ -191,6 +201,7 @@ export async function PUT(
       table_number: table_number || null,
       status,
       notes: notes || null,
+      discount: discount || 0,
       total_amount: totalAmount
     }, { transaction });
 

@@ -277,7 +277,7 @@ export default function NewPurchasePage() {
                         <option value="">Select a product</option>
                         {filteredProducts?.map(product => (
                           <option key={product.id} value={product.id}>
-                            {product.product_name} - ${formatNumber(product.price)}
+                            {product.product_name} - MMK{formatNumber(product.price)}
                           </option>
                         ))}
                       </select>
@@ -317,7 +317,7 @@ export default function NewPurchasePage() {
                   <div className="mt-3 flex justify-between items-center">
                     <span className="text-sm text-gray-600">Total for this item:</span>
                     <Badge variant="secondary" className="text-lg font-bold">
-                      ${formatNumber(item.total)}
+                      MMK{formatNumber(item.total)}
                     </Badge>
                   </div>
                 </div>
@@ -350,13 +350,13 @@ export default function NewPurchasePage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">${formatNumber(subtotal)}</span>
+                <span className="font-medium">MMK{formatNumber(subtotal)}</span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold">Total Amount:</span>
                   <span className="text-2xl font-bold text-green-600">
-                    ${formatNumber(totalAmount)}
+                    MMK{formatNumber(totalAmount)}
                   </span>
                 </div>
               </div>

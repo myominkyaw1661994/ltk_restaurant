@@ -114,6 +114,8 @@ export default function SalePage() {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch sales');
       }
+
+      console.log("data sales", data)
       
       setSales(data.sales);
       setTotalItems(data.pagination.totalItems);
@@ -239,6 +241,8 @@ export default function SalePage() {
       return 0
     })
   }
+
+  console.log("filteredSales", filteredSales)
 
   const handleSort = (column: 'date' | 'total') => {
     if (sortBy === column) {

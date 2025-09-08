@@ -28,7 +28,8 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = React.useState(false)
   const [formData, setFormData] = React.useState({
     paymentDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    adjustment: 0
   })
   const router = useRouter()
 
@@ -72,7 +73,8 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
     try {
       const response = await api.post(`/api/v1/staff/${params.id}/pay-salary`, {
         paymentDate: formData.paymentDate,
-        notes: formData.notes
+        notes: formData.notes,
+        adjustment: formData.adjustment
       })
 
       if (!response.success) {
@@ -179,13 +181,33 @@ export default function PaySalaryPage({ params }: { params: { id: string } }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Amount</Label>
-                  <div className="p-3 bg-gray-50 border rounded-md">
-                    <p className="font-semibold text-green-600 text-lg">
-                      {formatCurrency(Number(staff.salary) || 0)}
-                    </p>
-                    <p className="text-sm text-gray-500">Monthly salary amount</p>
-                  </div>
+                  <Label htmlFor="adjustment">Salary Adjustment</Label>
+                  <Input
+                    id="adjustment"
+                    type="number"
+                    value={formData.adjustment}
+                    onChange={(e) => handleInputChange('adjustment', e.target.value)}
+                    placeholder="0"
+                    className="text-right"
+                  />
+                  <p className="text-xs text-gray-500">Enter positive for bonus, negative for deduction</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Final Amount</Label>
+                <div className="p-3 bg-gray-50 border rounded-md">
+                  <p className="font-semibold text-green-600 text-lg">
+                    {formatCurrency((Number(staff.salary) || 0) + (Number(formData.adjustment) || 0))}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Base salary: {formatCurrency(Number(staff.salary) || 0)}
+                    {formData.adjustment !== 0 && (
+                      <span className="ml-2">
+                        {formData.adjustment > 0 ? '+' : ''}{formatCurrency(Number(formData.adjustment) || 0)} adjustment
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
 

@@ -41,6 +41,12 @@ export default function FloatingMenu() {
             <DropdownMenuItem className="m-5" onClick={() => router.push("/pos")}>
               POS
             </DropdownMenuItem>
+            <DropdownMenuItem className="m-5" onClick={() => router.push("/table")}>
+              စားပွဲ
+            </DropdownMenuItem>
+            <DropdownMenuItem className="m-5" onClick={() => router.push("/staff")}>
+              ဝန်ထမ်
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
     </div>

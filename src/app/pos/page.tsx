@@ -86,9 +86,17 @@ export default function POSPage() {
     }
 
     const fetchTables = async () => {
-      const tablesRes = await fetch(`/api/v1/table?available=true`)
-      const data = await tablesRes.json();
-      setTables(data.tables);
+      //check if table param is presents don't fetch available table
+      if (searchParams.get("table")) {
+        const tablesRes = await fetch(`/api/v1/table`)
+        const data = await tablesRes.json();
+        setTables(data.tables);
+      }else {
+        const tablesRes = await fetch(`/api/v1/table?avaiable=true`)
+        const data = await tablesRes.json();
+        setTables(data.tables);
+      }
+     
     }
 
     fetchProducts()
@@ -108,7 +116,6 @@ export default function POSPage() {
       // Fetch latest sale for this table
       const fetchLatestSale = async () => {
         try {
-          // const res = await fetch(`/api/v1/sale?table_number=${tableParam}&status=pending&limit=1&sort=desc`);
           const res = await fetch(`/api/v1/sale/pending_sale?table_number=${tableParam}`);
           const data = await res.json();
           console.log("res", res)
@@ -288,7 +295,25 @@ export default function POSPage() {
 
   return (
     <div className="container mx-auto py-4 px-2 sm:py-10 sm:px-4">
-      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center sm:text-left">Point of Sale</h1>
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-center sm:text-left">Point of Sale</h1>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={async () => {
+                // Clear the cart and form
+                setCartItems([]);
+                setCustomerName("");
+                setNotes("");
+                setDiscount(0);
+                toast.success("Table cleared successfully");
+                //remove table param from url
+                router.push(`/pos`)
+            }}
+          >
+            Clear Table
+          </Button>
+      </div>
       
       {/* Mobile: Stack vertically, Desktop: Side by side */}
       <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 sm:gap-6 overflow-y-auto lg:overflow-visible">
@@ -413,16 +438,15 @@ export default function POSPage() {
 
                 {/* Discount */}
                 <div>
-                  <label className="block font-medium mb-1 text-sm sm:text-base">Discount Amount (in cents)</label>
+                  <label className="block font-medium mb-1 text-sm sm:text-base">Discount Amount</label>
                   <Input
-                    type="number"
+                    type="text"
                     value={discount}
                     onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                    min={0}
-                    placeholder="0"
                     className="text-sm sm:text-base"
+                    placeholder="0"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Enter amount in cents (e.g., 1000 = $10.00)</p>
+                  <p className="text-xs text-gray-500 mt-1">Enter amount to apply discount</p>
                 </div>
 
                 {/* Cart Items */}
@@ -439,8 +463,8 @@ export default function POSPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {cartItems.map((item) => (
-                          <TableRow key={item.product_id}>
+                        {cartItems.map((item, index) => (
+                          <TableRow key={`${item.product_id}-${index}`}>
                             <TableCell className="text-xs sm:text-sm font-medium">{item.product_name}</TableCell>
                             <TableCell className="text-xs sm:text-sm">{item.price}</TableCell>
                             <TableCell>
@@ -797,7 +821,13 @@ export default function POSPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => setShowSuccessDialog(false)}
+              onClick={() => {
+                setShowSuccessDialog(false)
+                //redirect to the table page if table param is presents
+                if (searchParams.get("table")) {
+                  router.push(`/table?table=${searchParams.get("table")}`)
+                }
+              }}
               className="w-full sm:w-auto"
             >
               Close

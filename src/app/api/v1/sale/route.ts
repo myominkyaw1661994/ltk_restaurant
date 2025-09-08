@@ -366,7 +366,7 @@ export async function GET(request: NextRequest) {
 
       const formattedSales = sales.map((sale: any) => {
         const saleData = sale.toJSON ? sale.toJSON() : sale;
-        
+        console.log("saleData", saleData)
         return {
           id: saleData.id,
           sale_no: saleData.sale_no,
@@ -376,8 +376,8 @@ export async function GET(request: NextRequest) {
           customer_name: saleData.customer_name,
           table_number: saleData.table_number,
           notes: saleData.notes,
-          created_at: saleData.created_at,
-          updated_at: saleData.updated_at,
+          created_at: saleData.createdAt,
+          updated_at: saleData.updatedAt,
           user: saleData.user ? {
             id: saleData.user.id,
             username: saleData.user.username,

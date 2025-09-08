@@ -25,12 +25,19 @@ interface Product {
   price: number
 }
 
+interface Table {
+  id: string
+  name: string
+  status: 'available' | 'occupied' | 'reserved'
+}
+
 export default function NewSalePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
+  const [tables, setTables] = useState<Table[]>([])
   const [customerName, setCustomerName] = useState("")
   const [tableNumber, setTableNumber] = useState("")
   const [status, setStatus] = useState<'pending' | 'completed' | 'cancelled'>("pending")
@@ -77,7 +84,21 @@ export default function NewSalePage() {
         setLoading(false)
       }
     }
+
+    const fetchTables = async () => {
+      try {
+        const tablesRes = await fetch(`/api/v1/table?avaiable=true`)
+        const tablesData = await tablesRes.json()
+        if (tablesRes.ok) {
+          setTables(tablesData.tables || [])
+        }
+      } catch (err) {
+        console.error("Failed to fetch tables:", err)
+      }
+    }
+
     fetchProducts()
+    fetchTables()
   }, [router])
 
   // useEffect(() => {
@@ -101,8 +122,24 @@ export default function NewSalePage() {
 
   const handleAddItem = () => {
     if (products.length === 0) return
-    const firstProduct = products[0]
-    setItems([...items, { id: firstProduct.id, product_name: firstProduct.product_name, price: firstProduct.price, quantity: 1, total: firstProduct.price }])
+    
+    // Find the first product that's not already in the items
+    const availableProduct = products.find(product => 
+      !items.some(item => item.id === product.id)
+    )
+    
+    if (!availableProduct) {
+      toast.error("All products have already been added")
+      return
+    }
+    
+    setItems([...items, { 
+      id: availableProduct.id, 
+      product_name: availableProduct.product_name, 
+      price: availableProduct.price, 
+      quantity: 1, 
+      total: availableProduct.price 
+    }])
   }
 
   const handleRemoveItem = (idx: number) => {
@@ -117,14 +154,30 @@ export default function NewSalePage() {
     setSaving(true)
     setError(null)
     try {
+      // Transform items to match API expectations
+      const saleItems = items.map(item => ({
+        product_id: item.id,
+        product_name: item.product_name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total
+      }))
+
       const res = await fetch(`/api/v1/sale`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customer_name: customerName, table_number: tableNumber, status, notes, discount, items })
+        body: JSON.stringify({ 
+          customer_name: customerName, 
+          table_number: tableNumber, 
+          status, 
+          notes, 
+          discount, 
+          items: saleItems 
+        })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to create sale")
-              toast.success("Sale created!")
+      toast.success("Sale created!")
       router.push("/sale")
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
@@ -152,11 +205,11 @@ export default function NewSalePage() {
                 <SelectValue placeholder="Select table" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">Table 1</SelectItem>
-                <SelectItem value="2">Table 2</SelectItem>
-                <SelectItem value="3">Table 3</SelectItem>
-                <SelectItem value="4">Table 4</SelectItem>
-                <SelectItem value="5">Table 5</SelectItem>
+                {tables.map((table) => (
+                  <SelectItem key={table.id} value={table.name}>
+                    {table.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -179,12 +232,11 @@ export default function NewSalePage() {
           <Textarea value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
         <div>
-          <label className="block font-medium mb-1">Discount Amount (in cents)</label>
+          <label className="block font-medium mb-1">Discount Amount</label>
           <Input 
-            type="number" 
+            type="text" 
             value={discount} 
             onChange={e => setDiscount(Number(e.target.value) || 0)} 
-            min={0}
             placeholder="0"
           />
           <p className="text-xs text-gray-500 mt-1">Enter amount in cents (e.g., 1000 = $10.00)</p>
@@ -211,9 +263,21 @@ export default function NewSalePage() {
                         value={item.id}
                         onChange={e => handleProductChange(idx, e.target.value)}
                       >
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>{p.product_name}</option>
-                        ))}
+                        {products.map(p => {
+                          // Check if this product is already used in other items
+                          const isUsed = items.some((otherItem, otherIdx) => 
+                            otherIdx !== idx && otherItem.id === p.id
+                          )
+                          return (
+                            <option 
+                              key={p.id} 
+                              value={p.id}
+                              disabled={isUsed}
+                            >
+                              {p.product_name} {isUsed ? '(Already added)' : ''}
+                            </option>
+                          )
+                        })}
                       </select>
                     </TableCell>
                     <TableCell>
