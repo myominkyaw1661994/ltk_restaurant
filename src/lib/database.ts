@@ -1,7 +1,8 @@
 import { Sequelize } from 'sequelize';
 
 // Explicitly configure for MySQL only
-const sequelize = new Sequelize('test_rest_db', 'root', 'R>Xb2jP/', {
+// const sequelize = new Sequelize('test_rest_db', 'root', 'R>Xb2jP/', {
+const sequelize = new Sequelize('zojkpszw_rest', 'zojkpszw_rest_user', '2L9bGh&$nY', {
   host: 'localhost',
   dialect: 'mysql',
   port: 3306,
